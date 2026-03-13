@@ -49,7 +49,7 @@ if (!fs.existsSync(WIKI_FILE)) fs.writeFileSync(WIKI_FILE, JSON.stringify([
 function readJson<T>(file: string): T { return JSON.parse(fs.readFileSync(file, 'utf-8')); }
 function writeJson(file: string, data: unknown) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
 
-interface User { id: number; username: string; email: string; passwordHash: string; role: 'user'|'mod'|'admin'; templeCoins: number; createdAt: string; pfp?: string; bio?: string; }
+interface User { id: number; username: string; email: string; passwordHash: string; role: 'user'|'mod'|'admin'; templeCoins: number; createdAt: string; pfp?: string; bio?: string; ip?: string; }
 interface Thread { id: number; title: string; author: string; authorId: number; category: string; replies: number; views: number; createdAt: string; }
 interface Post { id: number; threadId: number; author: string; authorId: number; content: string; createdAt: string; }
 interface News { id: number; title: string; category: string; date: string; content: string; }
@@ -57,6 +57,7 @@ interface Update { id: number; title: string; date: string; }
 interface WikiArticle { id: number; title: string; category: string; content: string; createdAt: string; }
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy for accurate client IPs
 app.use(cors());
 app.use(express.json());
 
@@ -84,13 +85,60 @@ function authAdmin(req: express.Request, res: express.Response, next: express.Ne
     });
 }
 
+// Rate Limiter for DDoS prevention
+const rateLimits = new Map<string, { count: number; resetTime: number }>();
+
+// Cleanup stale rate limit records every minute
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, record] of rateLimits.entries()) {
+        if (record.resetTime < now) {
+            rateLimits.delete(key);
+        }
+    }
+}, 60000);
+
+function rateLimiter(limit: number, windowMs: number) {
+    return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        const ip = req.ip || req.socket.remoteAddress || 'unknown';
+        const key = `${req.path}:${ip}`;
+        const now = Date.now();
+
+        let record = rateLimits.get(key);
+        if (!record || record.resetTime < now) {
+            record = { count: 0, resetTime: now + windowMs };
+        }
+
+        record.count++;
+        rateLimits.set(key, record);
+
+        if (record.count > limit) {
+            res.status(429).json({ error: 'Too many requests, please try again later.' });
+            return;
+        }
+
+        next();
+    };
+}
+
 // Auth Routes
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', rateLimiter(5, 60 * 60 * 1000), async (req, res) => {
     const { username, email, password } = req.body;
     if (!username || !email || !password) { res.status(400).json({ error: 'All fields required' }); return; }
     if (username.length < 3 || username.length > 12) { res.status(400).json({ error: 'Username must be 3-12 characters' }); return; }
     
     const users = readJson<User[]>(USERS_FILE);
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    
+    // Check max accounts per IP (limit to 3)
+    if (ip !== 'unknown' && ip !== '::1' && ip !== '127.0.0.1') {
+        const accountsWithIp = users.filter(u => u.ip === ip);
+        if (accountsWithIp.length >= 3) {
+            res.status(403).json({ error: 'Maximum number of accounts reached for this IP address (3).' });
+            return;
+        }
+    }
+
     if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) { res.status(409).json({ error: 'Username already taken' }); return; }
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -101,7 +149,8 @@ app.post('/api/register', async (req, res) => {
         passwordHash,
         role: users.length === 0 ? 'admin' : 'user', // First user is admin
         templeCoins: 0,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        ip
     };
     users.push(newUser);
     writeJson(USERS_FILE, users);
@@ -110,7 +159,7 @@ app.post('/api/register', async (req, res) => {
     res.json({ token, user: { id: newUser.id, username: newUser.username, role: newUser.role, templeCoins: newUser.templeCoins, pfp: newUser.pfp || 'default.png', bio: newUser.bio || '' } });
 });
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', rateLimiter(10, 15 * 60 * 1000), async (req, res) => {
     const { username, password } = req.body;
     const users = readJson<User[]>(USERS_FILE);
     const user = users.find(u => u.username.toLowerCase() === username?.toLowerCase());
@@ -119,6 +168,11 @@ app.post('/api/login', async (req, res) => {
     }
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET);
     res.json({ token, user: { id: user.id, username: user.username, role: user.role, templeCoins: user.templeCoins, pfp: user.pfp || 'default.png', bio: user.bio || '' } });
+});
+
+app.post('/api/logout', rateLimiter(10, 15 * 60 * 1000), (_req, res) => {
+    // Dummy endpoint to handle logout rate limiting and logging
+    res.json({ success: true });
 });
 
 app.get('/api/me', auth, (req, res) => {

@@ -139,7 +139,16 @@ function updateUserPanel() {
         ${adminBtn}
       </div>
     `;
-    document.getElementById('btn-logout')?.addEventListener('click', () => {
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+      if (authToken) {
+        try {
+          const res = await apiPost('/logout', {}, true);
+          if (res.status === 429) {
+            alert('Too many logout attempts. Please try again later.');
+            return;
+          }
+        } catch (e) {}
+      }
       authToken = null; currentUser = null; localStorage.removeItem('trs_token'); window.location.hash = '#home'; renderPage();
     });
     document.getElementById('btn-admin-dash')?.addEventListener('click', openAdminModal);
