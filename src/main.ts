@@ -675,7 +675,7 @@ function renderPlayPage(container: HTMLElement) {
     container.innerHTML = `
       <div style="width: 100%; height: calc(100vh - 35px); display:flex; flex-direction:column; background-color: #000; overflow:hidden;">
         <div style="display:flex; flex-grow:1; height:100%; overflow:hidden; width:100%;">
-            <iframe src="https://www.tsunscape.cloud/client?world=1&detail=high&method=0" style="flex: 1 1 auto; min-width: 0; height: 100%; border:none;" allowfullscreen></iframe>
+            <iframe src="https://play.tsunscape.cloud/client?world=1&detail=high&method=0" style="flex: 1 1 auto; min-width: 0; height: 100%; border:none;" allowfullscreen></iframe>
         </div>
       </div>
     `;
