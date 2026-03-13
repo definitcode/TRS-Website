@@ -60,6 +60,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Prevent the website from being embedded in iframes (stops recursive iframe bug)
+app.use((_req, res, next) => {
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'self'");
+    next();
+});
+
 // Auth Middleware
 function auth(req: express.Request, res: express.Response, next: express.NextFunction) {
     const token = req.headers.authorization?.split(' ')[1];
@@ -230,7 +237,7 @@ app.post('/api/threads/:id/posts', auth, (req, res) => {
 app.get('/api/users/count', (_req, res) => res.json({ count: readJson<User[]>(USERS_FILE).length }));
 
 app.get('/api/ads', (_req, res) => {
-    const adDir = path.join(__dirname, '../public/ads');
+    const adDir = path.join(__dirname, '../public/addons/img/ads');
     if (!fs.existsSync(adDir)) return res.json([]);
     const files = fs.readdirSync(adDir).filter(f => /\.(png|jpg|jpeg|webp|gif)$/i.test(f));
     res.json(files);

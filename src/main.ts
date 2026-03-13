@@ -27,99 +27,103 @@ let adImages: string[] = [];
 const CATEGORIES = ['Announcements', 'General', 'Market', 'Guides', 'Off-Topic', 'Bug Reports'];
 
 const shopItems: ShopItem[] = [
-    { id: 1, name: '5 Temple Coins', price: 5.00, description: 'Starter pack for a minor boost.' },
-    { id: 2, name: '10 Temple Coins', price: 10.00, description: 'Small supporter pack.' },
-    { id: 3, name: '20 Temple Coins', price: 20.00, description: 'Bonus pack! Excellent value.' },
-    { id: 4, name: '50 Temple Coins', price: 50.00, description: 'The absolute best value.' },
-    { id: 5, name: '100 Temple Coins', price: 100.00, description: 'Generous supporter pack.' },
-    { id: 6, name: '500 Temple Coins', price: 500.00, description: 'Exceptional supporter pack.' },
-    { id: 7, name: '1000 Temple Coins', price: 1000.00, description: 'Heroic supporter pack.' },
+  { id: 1, name: '5 Temple Coins', price: 5.00, description: 'Starter pack for a minor boost.' },
+  { id: 2, name: '10 Temple Coins', price: 10.00, description: 'Small supporter pack.' },
+  { id: 3, name: '20 Temple Coins', price: 20.00, description: 'Bonus pack! Excellent value.' },
+  { id: 4, name: '50 Temple Coins', price: 50.00, description: 'The absolute best value.' },
+  { id: 5, name: '100 Temple Coins', price: 100.00, description: 'Generous supporter pack.' },
+  { id: 6, name: '500 Temple Coins', price: 500.00, description: 'Exceptional supporter pack.' },
+  { id: 7, name: '1000 Temple Coins', price: 1000.00, description: 'Heroic supporter pack.' },
 ];
 
 async function fetchData() {
-    try {
-        const [nRes, uRes, wRes, sRes, aRes] = await Promise.all([
-            fetch(`${API}/news`).catch(() => null),
-            fetch(`${API}/updates`).catch(() => null),
-            fetch(`${API}/wiki`).catch(() => null),
-            fetch(`${API}/slideshow`).catch(() => null),
-            fetch(`${API}/ads`).catch(() => null)
-        ]);
-        if (nRes && nRes.ok) newsPosts = await nRes.json();
-        if (uRes && uRes.ok) recentUpdates = await uRes.json();
-        if (wRes && wRes.ok) wikiArticles = await wRes.json();
-        if (sRes && sRes.ok) slideshowImages = await sRes.json();
-        if (aRes && aRes.ok) adImages = await aRes.json();
-    } catch (e) { console.error('Error fetching data', e); }
+  try {
+    const [nRes, uRes, wRes, sRes, aRes] = await Promise.all([
+      fetch(`${API}/news`).catch(() => null),
+      fetch(`${API}/updates`).catch(() => null),
+      fetch(`${API}/wiki`).catch(() => null),
+      fetch(`${API}/slideshow`).catch(() => null),
+      fetch(`${API}/ads`).catch(() => null)
+    ]);
+    if (nRes && nRes.ok) newsPosts = await nRes.json();
+    if (uRes && uRes.ok) recentUpdates = await uRes.json();
+    if (wRes && wRes.ok) wikiArticles = await wRes.json();
+    if (sRes && sRes.ok) slideshowImages = await sRes.json();
+    if (aRes && aRes.ok) adImages = await aRes.json();
+  } catch (e) { console.error('Error fetching data', e); }
 }
 
 async function fetchMe() {
-    if (!authToken) return;
-    try {
-        const res = await fetch(`${API}/me`, { headers: { Authorization: `Bearer ${authToken}` } });
-        if (!res.ok) { authToken = null; localStorage.removeItem('trs_token'); return; }
-        currentUser = await res.json();
-    } catch { authToken = null; localStorage.removeItem('trs_token'); }
+  if (!authToken) return;
+  try {
+    const res = await fetch(`${API}/me`, { headers: { Authorization: `Bearer ${authToken}` } });
+    if (!res.ok) { authToken = null; localStorage.removeItem('trs_token'); return; }
+    currentUser = await res.json();
+  } catch { authToken = null; localStorage.removeItem('trs_token'); }
 }
 
 async function apiPost(endpoint: string, body: object, auth = false) {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (auth && authToken) headers['Authorization'] = `Bearer ${authToken}`;
-    return await fetch(`${API}${endpoint}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (auth && authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  return await fetch(`${API}${endpoint}`, { method: 'POST', headers, body: JSON.stringify(body) });
 }
 
 // ─── Router ────────────────────────────────────────────────────────────────
 async function renderPage() {
-    const hash = window.location.hash || '#home';
-    const content = document.getElementById('page-content')!;
-    const mw = document.getElementById('main-wrap')!;
-    const ftr = document.getElementById('footer')!;
+  const hash = window.location.hash || '#home';
+  const content = document.getElementById('page-content')!;
+  const mw = document.getElementById('main-wrap')!;
+  const ftr = document.getElementById('footer')!;
 
-    document.querySelectorAll('.nav-cell').forEach(a => {
-        a.classList.remove('active');
-        if (a.getAttribute('href') === hash || (hash === '#home' && a.getAttribute('href') === '#home')) {
-            a.classList.add('active');
-        }
-    });
-
-    updateUserPanel();
-
-    if (hash === '#play') {
-        mw.style.maxWidth = 'none';
-        mw.style.width = '100%';
-        mw.style.padding = '0';
-        ftr.style.display = 'none';
-        document.body.style.overflow = 'hidden';
-    } else {
-        mw.style.maxWidth = '820px';
-        mw.style.width = 'auto';
-        mw.style.padding = '0 8px 20px 8px';
-        ftr.style.display = 'block';
-        document.body.style.overflow = 'auto';
+  document.querySelectorAll('.nav-cell').forEach(a => {
+    a.classList.remove('active');
+    if (a.getAttribute('href') === hash || (hash === '#home' && a.getAttribute('href') === '#home')) {
+      a.classList.add('active');
     }
+  });
 
-    if (hash === '#home') content.innerHTML = renderHome();
-    else if (hash === '#news') content.innerHTML = renderNews();
-    else if (hash.startsWith('#wiki')) renderWiki(content, hash);
-    else if (hash === '#forum') { renderForumIndex(content); return; }
-    else if (hash.startsWith('#thread-')) { renderThread(content, Number(hash.replace('#thread-', ''))); return; }
-    else if (hash === '#shop') { renderShopPage(content); return; }
-    else if (hash === '#play') { renderPlayPage(content); return; }
-    else if (hash === '#disclaimer') content.innerHTML = renderDisclaimerPage();
-    else if (hash === '#rules') content.innerHTML = renderRulesPage();
-    else if (hash === '#discord') content.innerHTML = renderDiscordPage();
-    else if (hash === '#privacy') content.innerHTML = renderPrivacyPage();
-    else content.innerHTML = renderHome();
+  updateUserPanel();
+  const topNav = document.getElementById('top-nav')!;
 
-    setupGlobalListeners();
+  if (hash === '#play') {
+    mw.style.maxWidth = 'none';
+    mw.style.width = '100%';
+    mw.style.padding = '0';
+    ftr.style.display = 'none';
+    topNav.style.display = 'none';
+    document.body.style.overflow = 'hidden';
+  } else {
+    mw.style.maxWidth = '820px';
+    mw.style.width = 'auto';
+    mw.style.padding = '0 8px 20px 8px';
+    ftr.style.display = 'block';
+    topNav.style.display = 'block';
+    document.body.style.overflow = 'auto';
+  }
+
+
+  if (hash === '#home') content.innerHTML = renderHome();
+  else if (hash === '#news') content.innerHTML = renderNews();
+  else if (hash.startsWith('#wiki')) renderWiki(content, hash);
+  else if (hash === '#forum') { renderForumIndex(content); return; }
+  else if (hash.startsWith('#thread-')) { renderThread(content, Number(hash.replace('#thread-', ''))); return; }
+  else if (hash === '#shop') { renderShopPage(content); return; }
+  else if (hash === '#play') { renderPlayPage(content); return; }
+  else if (hash === '#disclaimer') content.innerHTML = renderDisclaimerPage();
+  else if (hash === '#rules') content.innerHTML = renderRulesPage();
+  else if (hash === '#discord') content.innerHTML = renderDiscordPage();
+  else if (hash === '#privacy') content.innerHTML = renderPrivacyPage();
+  else content.innerHTML = renderHome();
+
+  setupGlobalListeners();
 }
 
 function updateUserPanel() {
-    const panel = document.getElementById('user-area')!;
-    if (!panel) return;
-    if (currentUser) {
-        let adminBtn = currentUser.role === 'admin' ? `<button class="btn-stone mt-6" id="btn-admin-dash" style="font-size:11px;padding:2px 6px">Admin panel</button>` : '';
-        panel.innerHTML = `
+  const panel = document.getElementById('user-area')!;
+  if (!panel) return;
+  if (currentUser) {
+    let adminBtn = currentUser.role === 'admin' ? `<button class="btn-stone mt-6" id="btn-admin-dash" style="font-size:11px;padding:2px 6px">Admin panel</button>` : '';
+    panel.innerHTML = `
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="width:32px; height:32px; border:1px solid #c8a840; background:#000; overflow:hidden; cursor:pointer;" id="btn-my-profile">
             <img src="/avatars/${currentUser.pfp || 'default.png'}" style="width:100%; height:100%; object-fit:cover;">
@@ -135,24 +139,24 @@ function updateUserPanel() {
         ${adminBtn}
       </div>
     `;
-        document.getElementById('btn-logout')?.addEventListener('click', () => {
-            authToken = null; currentUser = null; localStorage.removeItem('trs_token'); window.location.hash = '#home'; renderPage();
-        });
-        document.getElementById('btn-admin-dash')?.addEventListener('click', openAdminModal);
-        document.getElementById('btn-edit-profile')?.addEventListener('click', openProfileModal);
-        document.getElementById('btn-my-profile')?.addEventListener('click', openProfileModal);
-    } else {
-        panel.innerHTML = `<button class="btn-stone" style="font-size:12px;padding:4px 10px" id="btn-open-auth">Login / Register</button>`;
-        document.getElementById('btn-open-auth')?.addEventListener('click', () => openAuthModal('login'));
-    }
+    document.getElementById('btn-logout')?.addEventListener('click', () => {
+      authToken = null; currentUser = null; localStorage.removeItem('trs_token'); window.location.hash = '#home'; renderPage();
+    });
+    document.getElementById('btn-admin-dash')?.addEventListener('click', openAdminModal);
+    document.getElementById('btn-edit-profile')?.addEventListener('click', openProfileModal);
+    document.getElementById('btn-my-profile')?.addEventListener('click', openProfileModal);
+  } else {
+    panel.innerHTML = `<button class="btn-stone" style="font-size:12px;padding:4px 10px" id="btn-open-auth">Login / Register</button>`;
+    document.getElementById('btn-open-auth')?.addEventListener('click', () => openAuthModal('login'));
+  }
 }
 
 // ─── Home ──────────────────────────────────────────────────────────────────
 function renderHome() {
-    const ad1 = adImages.length > 0 ? `<img src="/ads/${adImages[0]}" style="height:100%; width:auto; display:block; margin:0 auto; object-fit:contain;">` : '<div>Ad Space</div>';
-    const ad2 = adImages.length > 1 ? `<img src="/ads/${adImages[1]}" style="height:100%; width:auto; display:block; margin:0 auto; object-fit:contain;">` : (adImages.length > 0 ? ad1 : '<div>Ad Space</div>');
+  const ad1 = adImages.length > 0 ? `<img src="/ads/${adImages[0]}" style="height:100%; width:auto; display:block; margin:0 auto; object-fit:contain;">` : '<div>Ad Space</div>';
+  const ad2 = adImages.length > 1 ? `<img src="/ads/${adImages[1]}" style="height:100%; width:auto; display:block; margin:0 auto; object-fit:contain;">` : (adImages.length > 0 ? ad1 : '<div>Ad Space</div>');
 
-    return `
+  return `
     <div id="logo-bar">
       <h1>TempleRS</h1>
     </div>
@@ -249,33 +253,33 @@ function renderHome() {
 
 // Global script for sliding
 (window as any).changeSlide = function (idx: number) {
-    const slides = document.querySelectorAll('.slide');
-    const dots = document.querySelectorAll('.dot');
-    if (!slides.length) return;
-    slides.forEach(s => (s as HTMLElement).style.opacity = '0');
-    dots.forEach(d => d.classList.remove('active'));
-    dots.forEach(d => (d as HTMLElement).style.background = '#555');
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.dot');
+  if (!slides.length) return;
+  slides.forEach(s => (s as HTMLElement).style.opacity = '0');
+  dots.forEach(d => d.classList.remove('active'));
+  dots.forEach(d => (d as HTMLElement).style.background = '#555');
 
-    (slides[idx] as HTMLElement).style.opacity = '1';
-    dots[idx].classList.add('active');
-    (dots[idx] as HTMLElement).style.background = '#c8a840';
+  (slides[idx] as HTMLElement).style.opacity = '1';
+  dots[idx].classList.add('active');
+  (dots[idx] as HTMLElement).style.background = '#c8a840';
 };
 (window as any).slideInterval = setInterval(() => {
-    const slides = document.querySelectorAll('.slide');
-    if (!slides.length) return;
-    let act = -1;
-    slides.forEach((s, i) => { if ((s as HTMLElement).style.opacity === '1' || s.classList.contains('slide-active')) act = i; });
-    let next = act + 1;
-    if (next >= slides.length) next = 0;
-    (window as any).changeSlide(next);
+  const slides = document.querySelectorAll('.slide');
+  if (!slides.length) return;
+  let act = -1;
+  slides.forEach((s, i) => { if ((s as HTMLElement).style.opacity === '1' || s.classList.contains('slide-active')) act = i; });
+  let next = act + 1;
+  if (next >= slides.length) next = 0;
+  (window as any).changeSlide(next);
 }, 5000);
 
 // ─── News ──────────────────────────────────────────────────────────────────
 function renderNews() {
-    const grp: Record<string, NewsPost[]> = {};
-    newsPosts.forEach(p => { const c = p.category || 'General'; if (!grp[c]) grp[c] = []; grp[c].push(p); });
+  const grp: Record<string, NewsPost[]> = {};
+  newsPosts.forEach(p => { const c = p.category || 'General'; if (!grp[c]) grp[c] = []; grp[c].push(p); });
 
-    const cats = Object.entries(grp).map(([cat, list]) => `
+  const cats = Object.entries(grp).map(([cat, list]) => `
     <div style="margin-bottom:16px;">
       <div style="font-weight:bold;color:#c8a840;border-bottom:1px solid #302000;padding-bottom:4px;margin-bottom:8px;">${cat}</div>
       ${list.map(p => `
@@ -290,7 +294,7 @@ function renderNews() {
     </div>
   `).join('');
 
-    return `
+  return `
     <div style="padding-top:10px">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>News</span></div>
       
@@ -306,17 +310,17 @@ function renderNews() {
 
 // ─── Wiki ──────────────────────────────────────────────────────────────────
 async function renderWiki(container: HTMLElement, hash: string) {
-    const parts = hash.split('/');
-    const id = parts[1] ? Number(parts[1]) : null;
+  const parts = hash.split('/');
+  const id = parts[1] ? Number(parts[1]) : null;
 
-    if (id) {
-        const article = wikiArticles.find(a => a.id === id);
-        if (!article) { container.innerHTML = '<div class="ta-c" style="padding:40px">Article not found.</div>'; return; }
+  if (id) {
+    const article = wikiArticles.find(a => a.id === id);
+    if (!article) { container.innerHTML = '<div class="ta-c" style="padding:40px">Article not found.</div>'; return; }
 
-        // Parse markdown (async resolution might occur depending on extensions, standard marked usually resolves sync but await is safer with recent versions)
-        const contentHtml = await marked.parse(article.content);
+    // Parse markdown (async resolution might occur depending on extensions, standard marked usually resolves sync but await is safer with recent versions)
+    const contentHtml = await marked.parse(article.content);
 
-        container.innerHTML = `
+    container.innerHTML = `
       <div style="padding-top:10px">
         <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#wiki">Wiki</a><span class="bc-sep">&gt;</span><span>${article.category}</span></div>
         <div class="panel w100">
@@ -328,8 +332,8 @@ async function renderWiki(container: HTMLElement, hash: string) {
         </div>
       </div>
     `;
-    } else {
-        container.innerHTML = `
+  } else {
+    container.innerHTML = `
       <div style="padding-top:10px">
         <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Wiki Hub</span></div>
         <div class="panel w100">
@@ -345,14 +349,14 @@ async function renderWiki(container: HTMLElement, hash: string) {
       </div>
     `;
 
-        const renderList = (query: string) => {
-            const filtered = wikiArticles.filter(a =>
-                !query || a.title.toLowerCase().includes(query) || a.content.toLowerCase().includes(query) || a.category.toLowerCase().includes(query)
-            );
-            const grp: Record<string, WikiArticle[]> = {};
-            filtered.forEach(a => { if (!grp[a.category]) grp[a.category] = []; grp[a.category].push(a); });
+    const renderList = (query: string) => {
+      const filtered = wikiArticles.filter(a =>
+        !query || a.title.toLowerCase().includes(query) || a.content.toLowerCase().includes(query) || a.category.toLowerCase().includes(query)
+      );
+      const grp: Record<string, WikiArticle[]> = {};
+      filtered.forEach(a => { if (!grp[a.category]) grp[a.category] = []; grp[a.category].push(a); });
 
-            const contentBox = Object.entries(grp).map(([cat, list]) => `
+      const contentBox = Object.entries(grp).map(([cat, list]) => `
         <div style="margin-bottom:16px">
           <div style="font-weight:bold;color:#c8a840;margin-bottom:6px;border-bottom:1px solid #302000;padding-bottom:4px">${cat}</div>
           <ul style="margin:0;padding-left:20px;list-style:square;color:#90c040">
@@ -365,22 +369,22 @@ async function renderWiki(container: HTMLElement, hash: string) {
         </div>
       `).join('');
 
-            const listContainer = document.getElementById('wiki-list-container');
-            if (listContainer) {
-                listContainer.innerHTML = filtered.length === 0 ? '<div class="ta-c text-muted">No articles found matching your query.</div>' : contentBox;
-            }
-        };
+      const listContainer = document.getElementById('wiki-list-container');
+      if (listContainer) {
+        listContainer.innerHTML = filtered.length === 0 ? '<div class="ta-c text-muted">No articles found matching your query.</div>' : contentBox;
+      }
+    };
 
-        renderList('');
-        document.getElementById('wiki-search')?.addEventListener('input', (e) => {
-            renderList((e.target as HTMLInputElement).value.toLowerCase());
-        });
-    }
+    renderList('');
+    document.getElementById('wiki-search')?.addEventListener('input', (e) => {
+      renderList((e.target as HTMLInputElement).value.toLowerCase());
+    });
+  }
 }
 
 // ─── Forums ────────────────────────────────────────────────────────────────
 async function renderForumIndex(container: HTMLElement) {
-    container.innerHTML = `
+  container.innerHTML = `
     <div style="padding-top:10px">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Forums</span></div>
       <div class="panel w100">
@@ -394,15 +398,15 @@ async function renderForumIndex(container: HTMLElement) {
       </div>
     </div>
   `;
-    setupGlobalListeners();
+  setupGlobalListeners();
 
-    try {
-        const res = await fetch(`${API}/threads`);
-        const threads: ForumThread[] = await res.json();
-        const grp: Record<string, ForumThread[]> = {};
-        threads.forEach(t => { if (!grp[t.category]) grp[t.category] = []; grp[t.category].push(t); });
+  try {
+    const res = await fetch(`${API}/threads`);
+    const threads: ForumThread[] = await res.json();
+    const grp: Record<string, ForumThread[]> = {};
+    threads.forEach(t => { if (!grp[t.category]) grp[t.category] = []; grp[t.category].push(t); });
 
-        const content = Object.entries(grp).map(([cat, list]: [string, any]) => `
+    const content = Object.entries(grp).map(([cat, list]: [string, any]) => `
       <div class="forum-section" style="margin-bottom:20px;border:1px solid #333;">
         <div style="background:#222527;color:#c8a840;font-weight:bold;padding:6px 12px;font-size:13px;border-bottom:1px solid #333;">${cat}</div>
         <table width="100%" cellspacing="0" cellpadding="0" class="forum-table">
@@ -428,23 +432,23 @@ async function renderForumIndex(container: HTMLElement) {
       </div>
     `).join('');
 
-        document.getElementById('forum-content')!.innerHTML = content || '<div class="ta-c" style="padding:20px;color:#666">No threads yet.</div>';
+    document.getElementById('forum-content')!.innerHTML = content || '<div class="ta-c" style="padding:20px;color:#666">No threads yet.</div>';
 
-        document.querySelectorAll('.forum-thread-row').forEach(row => {
-            row.addEventListener('click', () => { window.location.hash = `#thread-${row.getAttribute('data-id')}`; });
-        });
-    } catch {
-        document.getElementById('forum-content')!.innerHTML = `<div class="ta-c col-red" style="padding:20px">Failed to load threads.</div>`;
-    }
+    document.querySelectorAll('.forum-thread-row').forEach(row => {
+      row.addEventListener('click', () => { window.location.hash = `#thread-${row.getAttribute('data-id')}`; });
+    });
+  } catch {
+    document.getElementById('forum-content')!.innerHTML = `<div class="ta-c col-red" style="padding:20px">Failed to load threads.</div>`;
+  }
 }
 
 async function renderThread(container: HTMLElement, threadId: number) {
-    container.innerHTML = `<div class="ta-c" style="padding:40px"><div class="spinner"></div></div>`;
-    try {
-        const res = await fetch(`${API}/threads/${threadId}/posts`);
-        const { thread, posts } = await res.json();
+  container.innerHTML = `<div class="ta-c" style="padding:40px"><div class="spinner"></div></div>`;
+  try {
+    const res = await fetch(`${API}/threads/${threadId}/posts`);
+    const { thread, posts } = await res.json();
 
-        const pHTML = posts.map((p: any) => `
+    const pHTML = posts.map((p: any) => `
       <div class="post-box">
         <div class="post-author-panel">
           <div class="post-avatar" style="border:1px solid #c8a840; overflow:hidden; background:#000;">
@@ -461,7 +465,7 @@ async function renderThread(container: HTMLElement, threadId: number) {
       </div>
     `).join('');
 
-        container.innerHTML = `
+    container.innerHTML = `
       <div style="padding-top:10px">
         <div class="breadcrumb">
           <a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#forum">Forums</a><span class="bc-sep">&gt;</span><span>${thread.title}</span>
@@ -488,26 +492,26 @@ async function renderThread(container: HTMLElement, threadId: number) {
       </div>
     `;
 
-        document.getElementById('btn-re-sub')?.addEventListener('click', async (e) => {
-            const btn = e.target as HTMLButtonElement;
-            const content = (document.getElementById('re-body') as HTMLInputElement).value.trim();
-            const err = document.getElementById('re-err')!;
-            if (!content) { err.textContent = 'Reply cannot be empty'; err.classList.add('show'); return; }
-            btn.disabled = true;
-            const res = await apiPost(`/threads/${btn.dataset.id}/posts`, { content }, true);
-            if (res.ok) renderThread(document.getElementById('page-content')!, threadId);
-            else { err.textContent = (await res.json()).error; err.classList.add('show'); btn.disabled = false; }
-        });
-        document.getElementById('btn-auth-reply')?.addEventListener('click', () => openAuthModal('login'));
+    document.getElementById('btn-re-sub')?.addEventListener('click', async (e) => {
+      const btn = e.target as HTMLButtonElement;
+      const content = (document.getElementById('re-body') as HTMLInputElement).value.trim();
+      const err = document.getElementById('re-err')!;
+      if (!content) { err.textContent = 'Reply cannot be empty'; err.classList.add('show'); return; }
+      btn.disabled = true;
+      const res = await apiPost(`/threads/${btn.dataset.id}/posts`, { content }, true);
+      if (res.ok) renderThread(document.getElementById('page-content')!, threadId);
+      else { err.textContent = (await res.json()).error; err.classList.add('show'); btn.disabled = false; }
+    });
+    document.getElementById('btn-auth-reply')?.addEventListener('click', () => openAuthModal('login'));
 
-    } catch {
-        container.innerHTML = `<div class="ta-c col-red" style="padding:40px">Could not load thread.</div>`;
-    }
+  } catch {
+    container.innerHTML = `<div class="ta-c col-red" style="padding:40px">Could not load thread.</div>`;
+  }
 }
 
 // ─── Shop ─────────────────────────────────────────────────────────────────
 function renderShopPage(container: HTMLElement) {
-    container.innerHTML = `
+  container.innerHTML = `
     <div style="padding-top:10px">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Store</span></div>
       <div class="panel w100">
@@ -530,13 +534,13 @@ function renderShopPage(container: HTMLElement) {
       </div>
     </div>
   `;
-    container.querySelectorAll('.shop-buy-btn').forEach(b => b.addEventListener('click', () => alert('Payment integration pending.')));
-    document.getElementById('btn-shop-auth')?.addEventListener('click', () => openAuthModal('login'));
+  container.querySelectorAll('.shop-buy-btn').forEach(b => b.addEventListener('click', () => alert('Payment integration pending.')));
+  document.getElementById('btn-shop-auth')?.addEventListener('click', () => openAuthModal('login'));
 }
 
 // ─── Footer Pages ────────────────────────────────────────────────────────
 function renderDisclaimerPage() {
-    return `
+  return `
     <div style="padding-top:10px; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Disclaimer</span></div>
       <div class="panel w100">
@@ -555,7 +559,7 @@ function renderDisclaimerPage() {
 }
 
 function renderRulesPage() {
-    return `
+  return `
     <div style="padding-top:10px; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Rules</span></div>
       <div class="panel w100">
@@ -600,7 +604,7 @@ function renderRulesPage() {
 }
 
 function renderDiscordPage() {
-    return `
+  return `
     <div style="padding-top:10px; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Discord</span></div>
       <div class="panel w100">
@@ -631,7 +635,7 @@ function renderDiscordPage() {
 }
 
 function renderPrivacyPage() {
-    return `
+  return `
     <div style="padding-top:10px; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Privacy Policy</span></div>
       <div class="panel w100">
@@ -672,19 +676,117 @@ function renderPrivacyPage() {
 
 // ─── Play Now ──────────────────────────────────────────────────────────────
 function renderPlayPage(container: HTMLElement) {
-    container.innerHTML = `
-      <div style="width: 100%; height: calc(100vh - 35px); display:flex; flex-direction:column; background-color: #000; overflow:hidden;">
-        <div style="display:flex; flex-grow:1; height:100%; overflow:hidden; width:100%;">
-            <iframe src="https://play.tsunscape.cloud/client?world=1&detail=high&method=0" style="flex: 1 1 auto; min-width: 0; height: 100%; border:none;" allowfullscreen></iframe>
+  container.innerHTML = `
+      <div class="play-container">
+        <!-- Navigation bar -->
+        <div class="play-nav-bar">
+            <a href="#home" class="play-nav-btn">Main Menu</a>
+            <a href="https://discord.gg/sCnvbXVnMf" target="_blank" class="play-nav-btn">Discord</a>
+            <a href="#" onclick="window.open('https://mejrs.github.io/historical?era=rs2_2004_07_13&p=0&x=2944&y=3411&z=-1&m=-1&layer=grid', 'WorldMap', 'width=600,height=450,menubar=no,toolbar=no,location=no,status=no'); return false;" class="play-nav-btn">World Map</a>
+            <a href="#" class="play-nav-btn" id="toggleChatLink">Show Tools</a>
+            <a href="javascript:location.reload()" class="play-nav-btn">Refresh</a>
+        </div>
+
+        <!-- Main content area -->
+        <div class="main-content-play chat-hidden" id="play-main-content">
+            <div style="flex-grow:1; display:flex; justify-content:center; align-items:flex-start; height:100%; overflow:hidden; width:100%;">
+                <iframe src="https://play.tsunscape.cloud/rs2.cgi" class="gameframe-iframe" allowfullscreen></iframe>
+            </div>
+
+            <!-- Sidebar tools -->
+            <div class="play-sidebar">
+                <div class="sidebar-tabs">
+                    <button class="tab-button active" data-tab="chat">Chat</button>
+                    <button class="tab-button" data-tab="specialguides">Special Guides</button>
+                    <button class="tab-button" data-tab="droptables">Drop Tables</button>
+                    <button class="tab-button" data-tab="itemdb">Item DB</button>
+                    <button class="tab-button" data-tab="calculators">Calculators</button>
+                    <button class="tab-button" data-tab="skillguides">Skill Guides</button>
+                    <button class="tab-button" data-tab="questguides">Quest Guides</button>
+                    <button class="tab-button" data-tab="resources">Resources</button>
+                </div>
+
+                <div class="tab-content active" id="tab-chat">
+                    <iframe class="iframe-tool" src="https://app.2004.chat" allowfullscreen></iframe>
+                </div>
+                <div class="tab-content" id="tab-specialguides">
+                    <iframe class="iframe-tool" src="https://2004.losthq.rs/?p=specialguides" allowfullscreen></iframe>
+                </div>
+                 <div class="tab-content" id="tab-droptables">
+                    <iframe class="iframe-tool" src="https://2004.losthq.rs/?p=droptables" allowfullscreen></iframe>
+                </div>
+                <div class="tab-content" id="tab-itemdb">
+                    <iframe class="iframe-tool" src="https://2004.losthq.rs/?p=itemdb" allowfullscreen></iframe>
+                </div>
+                <div class="tab-content" id="tab-calculators">
+                    <iframe class="iframe-tool" src="https://2004.losthq.rs/?p=calculators" allowfullscreen></iframe>
+                </div>
+                <div class="tab-content" id="tab-skillguides">
+                    <iframe class="iframe-tool" src="https://2004.losthq.rs/?p=skillguides" allowfullscreen></iframe>
+                </div>
+                <div class="tab-content" id="tab-questguides">
+                    <iframe class="iframe-tool" src="https://2004.losthq.rs/?p=questguides" allowfullscreen></iframe>
+                </div>
+
+                <div class="tab-content" id="tab-resources">
+                  <div style="padding: 10px; overflow-y: auto;">
+                    <details open>
+                      <summary>Communication Servers</summary>
+                      <a href="https://discord.gg/sCnvbXVnMf target="_blank">Discord (main)</a>
+                    </details>
+                    <details>
+                      <summary>Community Forum</summary>
+                      <a href="#forum" target="_blank">Forum</a>
+                    </details>
+                    <details>
+                      <summary>Browser Extension</summary>
+                      <a href="https://2004.chat" target="_blank">2004.chat</a>
+                      <p style="color:#FFE139; font-size:11px; margin-left:12px;">Join <code>TempleRS</code> channel</p>
+                    </details>
+                    <details>
+                      <summary>Game Resources</summary>
+                      <a href="https://2004.losthq.rs" target="_blank">LostHQ</a>
+                    </details>
+                    <details>
+                      <summary>GitHub Repos</summary>
+                      <a href="#" target="_blank">Project Repos</a>
+                      <a href="#" target="_blank">Commits</a>
+                    </details>
+                  </div>
+                </div>
+            </div>
         </div>
       </div>
     `;
+
+  // Sidebar toggle
+  const toggleLink = container.querySelector('#toggleChatLink')!;
+  const playMain = container.querySelector('#play-main-content')!;
+  toggleLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isHidden = playMain.classList.toggle('chat-hidden');
+    toggleLink.textContent = isHidden ? 'Show Tools' : 'Hide Tools';
+  });
+
+  // Tab switching
+  const tabButtons = container.querySelectorAll('.tab-button');
+  const tabContents = container.querySelectorAll('.tab-content');
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      const tabId = 'tab-' + (btn as HTMLElement).dataset.tab;
+      container.querySelector(`#${tabId}`)?.classList.add('active');
+    });
+  });
 }
+
 
 // ─── Modals ───────────────────────────────────────────────────────────────
 function openAuthModal(tab: 'login' | 'register' = 'login') {
-    document.getElementById('modal-ov')?.remove();
-    const raw = `
+  document.getElementById('modal-ov')?.remove();
+  const raw = `
     <div class="modal-overlay" id="modal-ov">
       <div class="modal-box">
         <div class="modal-title-bar">
@@ -715,50 +817,50 @@ function openAuthModal(tab: 'login' | 'register' = 'login') {
       </div>
     </div>
   `;
-    document.body.insertAdjacentHTML('beforeend', raw);
-    const mov = document.getElementById('modal-ov')!;
-    requestAnimationFrame(() => mov.classList.add('open'));
+  document.body.insertAdjacentHTML('beforeend', raw);
+  const mov = document.getElementById('modal-ov')!;
+  requestAnimationFrame(() => mov.classList.add('open'));
 
-    const closeM = () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); };
-    document.getElementById('mc-close')?.addEventListener('click', closeM);
-    mov.addEventListener('click', e => { if (e.target === mov) closeM(); });
+  const closeM = () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); };
+  document.getElementById('mc-close')?.addEventListener('click', closeM);
+  mov.addEventListener('click', e => { if (e.target === mov) closeM(); });
 
-    const fl = document.getElementById('f-login')!, fr = document.getElementById('f-register')!;
-    const mtL = document.getElementById('mt-login')!, mtR = document.getElementById('mt-register')!;
-    const err = document.getElementById('m-err')!, ok = document.getElementById('m-ok')!;
+  const fl = document.getElementById('f-login')!, fr = document.getElementById('f-register')!;
+  const mtL = document.getElementById('mt-login')!, mtR = document.getElementById('mt-register')!;
+  const err = document.getElementById('m-err')!, ok = document.getElementById('m-ok')!;
 
-    mtL.addEventListener('click', () => { fl.style.display = 'block'; fr.style.display = 'none'; mtL.classList.add('active'); mtR.classList.remove('active'); err.classList.remove('show'); });
-    mtR.addEventListener('click', () => { fr.style.display = 'block'; fl.style.display = 'none'; mtR.classList.add('active'); mtL.classList.remove('active'); err.classList.remove('show'); });
+  mtL.addEventListener('click', () => { fl.style.display = 'block'; fr.style.display = 'none'; mtL.classList.add('active'); mtR.classList.remove('active'); err.classList.remove('show'); });
+  mtR.addEventListener('click', () => { fr.style.display = 'block'; fl.style.display = 'none'; mtR.classList.add('active'); mtL.classList.remove('active'); err.classList.remove('show'); });
 
-    fl.addEventListener('submit', async e => {
-        e.preventDefault();
-        const [u, p] = [(document.getElementById('l-usr') as HTMLInputElement).value, (document.getElementById('l-pwd') as HTMLInputElement).value];
-        if (!u || !p) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
-        document.getElementById('btn-ls')!.innerHTML = '<span class="spinner"></span>';
-        const res = await apiPost('/login', { username: u, password: p });
-        if (!res.ok) { err.textContent = (await res.json()).error; err.classList.add('show'); document.getElementById('btn-ls')!.textContent = 'Login'; return; }
-        const { token, user } = await res.json();
-        authToken = token; currentUser = user; localStorage.setItem('trs_token', token);
-        closeM(); renderPage();
-    });
+  fl.addEventListener('submit', async e => {
+    e.preventDefault();
+    const [u, p] = [(document.getElementById('l-usr') as HTMLInputElement).value, (document.getElementById('l-pwd') as HTMLInputElement).value];
+    if (!u || !p) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
+    document.getElementById('btn-ls')!.innerHTML = '<span class="spinner"></span>';
+    const res = await apiPost('/login', { username: u, password: p });
+    if (!res.ok) { err.textContent = (await res.json()).error; err.classList.add('show'); document.getElementById('btn-ls')!.textContent = 'Login'; return; }
+    const { token, user } = await res.json();
+    authToken = token; currentUser = user; localStorage.setItem('trs_token', token);
+    closeM(); renderPage();
+  });
 
-    fr.addEventListener('submit', async e => {
-        e.preventDefault();
-        const [u, em, p] = [(document.getElementById('r-usr') as HTMLInputElement).value, (document.getElementById('r-eml') as HTMLInputElement).value, (document.getElementById('r-pwd') as HTMLInputElement).value];
-        if (!u || !em || !p) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
-        document.getElementById('btn-rs')!.innerHTML = '<span class="spinner"></span>';
-        const res = await apiPost('/register', { username: u, email: em, password: p });
-        const data = await res.json();
-        if (!res.ok) { err.textContent = data.error; err.classList.add('show'); document.getElementById('btn-rs')!.textContent = 'Create Account'; return; }
-        authToken = data.token; currentUser = data.user; localStorage.setItem('trs_token', data.token);
-        err.classList.remove('show'); ok.textContent = 'Account created successfully!'; ok.classList.add('show');
-        setTimeout(() => { closeM(); renderPage(); }, 1000);
-    });
+  fr.addEventListener('submit', async e => {
+    e.preventDefault();
+    const [u, em, p] = [(document.getElementById('r-usr') as HTMLInputElement).value, (document.getElementById('r-eml') as HTMLInputElement).value, (document.getElementById('r-pwd') as HTMLInputElement).value];
+    if (!u || !em || !p) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
+    document.getElementById('btn-rs')!.innerHTML = '<span class="spinner"></span>';
+    const res = await apiPost('/register', { username: u, email: em, password: p });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error; err.classList.add('show'); document.getElementById('btn-rs')!.textContent = 'Create Account'; return; }
+    authToken = data.token; currentUser = data.user; localStorage.setItem('trs_token', data.token);
+    err.classList.remove('show'); ok.textContent = 'Account created successfully!'; ok.classList.add('show');
+    setTimeout(() => { closeM(); renderPage(); }, 1000);
+  });
 }
 
 function openAdminModal() {
-    document.getElementById('modal-admin')?.remove();
-    const raw = `
+  document.getElementById('modal-admin')?.remove();
+  const raw = `
     <div class="modal-overlay" id="modal-admin">
       <div class="modal-box" style="width:500px">
         <div class="modal-title-bar">
@@ -796,72 +898,72 @@ function openAdminModal() {
       </div>
     </div>
   `;
-    document.body.insertAdjacentHTML('beforeend', raw);
-    const mov = document.getElementById('modal-admin')!;
-    requestAnimationFrame(() => mov.classList.add('open'));
+  document.body.insertAdjacentHTML('beforeend', raw);
+  const mov = document.getElementById('modal-admin')!;
+  requestAnimationFrame(() => mov.classList.add('open'));
 
-    const closeM = () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); };
-    document.getElementById('ma-close')?.addEventListener('click', closeM);
+  const closeM = () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); };
+  document.getElementById('ma-close')?.addEventListener('click', closeM);
 
-    const fn = document.getElementById('f-news')!, fu = document.getElementById('f-update')!, fw = document.getElementById('f-wiki')!;
-    const mtN = document.getElementById('mat-news')!, mtU = document.getElementById('mat-update')!, mtW = document.getElementById('mat-wiki')!;
-    const err = document.getElementById('ma-err')!, ok = document.getElementById('ma-ok')!;
+  const fn = document.getElementById('f-news')!, fu = document.getElementById('f-update')!, fw = document.getElementById('f-wiki')!;
+  const mtN = document.getElementById('mat-news')!, mtU = document.getElementById('mat-update')!, mtW = document.getElementById('mat-wiki')!;
+  const err = document.getElementById('ma-err')!, ok = document.getElementById('ma-ok')!;
 
-    mtN.addEventListener('click', () => { fn.style.display = 'block'; fu.style.display = 'none'; fw.style.display = 'none'; mtN.classList.add('active'); mtU.classList.remove('active'); mtW.classList.remove('active'); err.classList.remove('show'); ok.classList.remove('show'); });
-    mtU.addEventListener('click', () => { fu.style.display = 'block'; fn.style.display = 'none'; fw.style.display = 'none'; mtU.classList.add('active'); mtN.classList.remove('active'); mtW.classList.remove('active'); err.classList.remove('show'); ok.classList.remove('show'); });
-    mtW.addEventListener('click', () => { fw.style.display = 'block'; fn.style.display = 'none'; fu.style.display = 'none'; mtW.classList.add('active'); mtN.classList.remove('active'); mtU.classList.remove('active'); err.classList.remove('show'); ok.classList.remove('show'); });
+  mtN.addEventListener('click', () => { fn.style.display = 'block'; fu.style.display = 'none'; fw.style.display = 'none'; mtN.classList.add('active'); mtU.classList.remove('active'); mtW.classList.remove('active'); err.classList.remove('show'); ok.classList.remove('show'); });
+  mtU.addEventListener('click', () => { fu.style.display = 'block'; fn.style.display = 'none'; fw.style.display = 'none'; mtU.classList.add('active'); mtN.classList.remove('active'); mtW.classList.remove('active'); err.classList.remove('show'); ok.classList.remove('show'); });
+  mtW.addEventListener('click', () => { fw.style.display = 'block'; fn.style.display = 'none'; fu.style.display = 'none'; mtW.classList.add('active'); mtN.classList.remove('active'); mtU.classList.remove('active'); err.classList.remove('show'); ok.classList.remove('show'); });
 
-    fn.addEventListener('submit', async e => {
-        e.preventDefault();
-        const title = (document.getElementById('an-title') as HTMLInputElement).value.trim();
-        const category = (document.getElementById('an-cat') as HTMLInputElement).value.trim() || 'General';
-        const content = (document.getElementById('an-content') as HTMLInputElement).value.trim();
-        if (!title || !content) { err.textContent = 'Fill fields'; err.classList.add('show'); return; }
-        const res = await apiPost('/news', { title, category, content }, true);
-        if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
-        const news = await res.json();
-        newsPosts.unshift(news);
-        ok.textContent = 'News Posted!'; ok.classList.add('show'); err.classList.remove('show');
-        (document.getElementById('an-title') as HTMLInputElement).value = '';
-        (document.getElementById('an-content') as HTMLInputElement).value = '';
-        setTimeout(() => { if (window.location.hash === '#home' || window.location.hash === '#news') renderPage(); }, 500);
-    });
+  fn.addEventListener('submit', async e => {
+    e.preventDefault();
+    const title = (document.getElementById('an-title') as HTMLInputElement).value.trim();
+    const category = (document.getElementById('an-cat') as HTMLInputElement).value.trim() || 'General';
+    const content = (document.getElementById('an-content') as HTMLInputElement).value.trim();
+    if (!title || !content) { err.textContent = 'Fill fields'; err.classList.add('show'); return; }
+    const res = await apiPost('/news', { title, category, content }, true);
+    if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
+    const news = await res.json();
+    newsPosts.unshift(news);
+    ok.textContent = 'News Posted!'; ok.classList.add('show'); err.classList.remove('show');
+    (document.getElementById('an-title') as HTMLInputElement).value = '';
+    (document.getElementById('an-content') as HTMLInputElement).value = '';
+    setTimeout(() => { if (window.location.hash === '#home' || window.location.hash === '#news') renderPage(); }, 500);
+  });
 
-    fu.addEventListener('submit', async e => {
-        e.preventDefault();
-        const title = (document.getElementById('au-title') as HTMLInputElement).value.trim();
-        if (!title) { err.textContent = 'Fill title'; err.classList.add('show'); return; }
-        const res = await apiPost('/updates', { title }, true);
-        if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
-        const upd = await res.json();
-        recentUpdates.unshift(upd);
-        ok.textContent = 'Update Posted!'; ok.classList.add('show'); err.classList.remove('show');
-        (document.getElementById('au-title') as HTMLInputElement).value = '';
-        setTimeout(() => { if (window.location.hash === '#home') renderPage(); }, 500);
-    });
+  fu.addEventListener('submit', async e => {
+    e.preventDefault();
+    const title = (document.getElementById('au-title') as HTMLInputElement).value.trim();
+    if (!title) { err.textContent = 'Fill title'; err.classList.add('show'); return; }
+    const res = await apiPost('/updates', { title }, true);
+    if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
+    const upd = await res.json();
+    recentUpdates.unshift(upd);
+    ok.textContent = 'Update Posted!'; ok.classList.add('show'); err.classList.remove('show');
+    (document.getElementById('au-title') as HTMLInputElement).value = '';
+    setTimeout(() => { if (window.location.hash === '#home') renderPage(); }, 500);
+  });
 
-    fw.addEventListener('submit', async e => {
-        e.preventDefault();
-        const title = (document.getElementById('aw-title') as HTMLInputElement).value.trim();
-        const category = (document.getElementById('aw-cat') as HTMLInputElement).value.trim();
-        const content = (document.getElementById('aw-content') as HTMLInputElement).value.trim();
-        if (!title || !category || !content) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
-        const res = await apiPost('/wiki', { title, category, content }, true);
-        if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
-        const article = await res.json();
-        wikiArticles.push(article);
-        ok.textContent = 'Wiki Article Added!'; ok.classList.add('show'); err.classList.remove('show');
-        (document.getElementById('aw-title') as HTMLInputElement).value = '';
-        (document.getElementById('aw-cat') as HTMLInputElement).value = '';
-        (document.getElementById('aw-content') as HTMLInputElement).value = '';
-        setTimeout(() => { if (window.location.hash === '#wiki') renderPage(); }, 500);
-    });
+  fw.addEventListener('submit', async e => {
+    e.preventDefault();
+    const title = (document.getElementById('aw-title') as HTMLInputElement).value.trim();
+    const category = (document.getElementById('aw-cat') as HTMLInputElement).value.trim();
+    const content = (document.getElementById('aw-content') as HTMLInputElement).value.trim();
+    if (!title || !category || !content) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
+    const res = await apiPost('/wiki', { title, category, content }, true);
+    if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
+    const article = await res.json();
+    wikiArticles.push(article);
+    ok.textContent = 'Wiki Article Added!'; ok.classList.add('show'); err.classList.remove('show');
+    (document.getElementById('aw-title') as HTMLInputElement).value = '';
+    (document.getElementById('aw-cat') as HTMLInputElement).value = '';
+    (document.getElementById('aw-content') as HTMLInputElement).value = '';
+    setTimeout(() => { if (window.location.hash === '#wiki') renderPage(); }, 500);
+  });
 }
 
 function openNewThreadModal() {
-    const c = CATEGORIES;
-    document.getElementById('modal-nt')?.remove();
-    const raw = `
+  const c = CATEGORIES;
+  document.getElementById('modal-nt')?.remove();
+  const raw = `
     <div class="modal-overlay" id="modal-nt">
       <div class="modal-box">
         <div class="modal-title-bar"><span class="modal-title">New Thread</span><button class="modal-close" id="mnt-close">x</button></div>
@@ -880,34 +982,34 @@ function openNewThreadModal() {
       </div>
     </div>
   `;
-    document.body.insertAdjacentHTML('beforeend', raw);
-    const mov = document.getElementById('modal-nt')!;
-    requestAnimationFrame(() => mov.classList.add('open'));
-    mov.querySelector('#mnt-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
-    mov.querySelector('#f-nt')?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const btn = document.getElementById('btn-nts') as HTMLButtonElement;
-        const err = document.getElementById('mnt-err')!;
-        const [t, c, b] = [(document.getElementById('nt-tit') as HTMLInputElement).value, (document.getElementById('nt-cat') as HTMLSelectElement).value, (document.getElementById('nt-con') as HTMLInputElement).value];
-        if (!t || !b) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
-        btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
-        const res = await apiPost('/threads', { title: t, category: c, content: b }, true);
-        if (res.ok) {
-            const data = await res.json();
-            mov.classList.remove('open'); setTimeout(() => mov.remove(), 250);
-            window.location.hash = `#thread-${data.id}`;
-            renderPage();
-        } else {
-            err.textContent = (await res.json()).error; err.classList.add('show'); btn.disabled = false; btn.textContent = 'Post Thread';
-        }
-    });
+  document.body.insertAdjacentHTML('beforeend', raw);
+  const mov = document.getElementById('modal-nt')!;
+  requestAnimationFrame(() => mov.classList.add('open'));
+  mov.querySelector('#mnt-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
+  mov.querySelector('#f-nt')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-nts') as HTMLButtonElement;
+    const err = document.getElementById('mnt-err')!;
+    const [t, c, b] = [(document.getElementById('nt-tit') as HTMLInputElement).value, (document.getElementById('nt-cat') as HTMLSelectElement).value, (document.getElementById('nt-con') as HTMLInputElement).value];
+    if (!t || !b) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    const res = await apiPost('/threads', { title: t, category: c, content: b }, true);
+    if (res.ok) {
+      const data = await res.json();
+      mov.classList.remove('open'); setTimeout(() => mov.remove(), 250);
+      window.location.hash = `#thread-${data.id}`;
+      renderPage();
+    } else {
+      err.textContent = (await res.json()).error; err.classList.add('show'); btn.disabled = false; btn.textContent = 'Post Thread';
+    }
+  });
 }
 
 function openProfileModal() {
-    if (!currentUser) return;
-    document.getElementById('modal-profile')?.remove();
+  if (!currentUser) return;
+  document.getElementById('modal-profile')?.remove();
 
-    const raw = `
+  const raw = `
     <div class="modal-overlay" id="modal-profile">
       <div class="modal-box" style="width:450px">
         <div class="modal-title-bar"><span class="modal-title">Edit Your Profile</span><button class="modal-close" id="mp-close">x</button></div>
@@ -933,70 +1035,70 @@ function openProfileModal() {
     </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', raw);
-    const mov = document.getElementById('modal-profile')!;
-    requestAnimationFrame(() => mov.classList.add('open'));
-    document.getElementById('mp-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
+  document.body.insertAdjacentHTML('beforeend', raw);
+  const mov = document.getElementById('modal-profile')!;
+  requestAnimationFrame(() => mov.classList.add('open'));
+  document.getElementById('mp-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
 
-    let selectedPfp = currentUser.pfp || 'default.png';
+  let selectedPfp = currentUser.pfp || 'default.png';
 
-    const renderAvatars = async () => {
-        try {
-            const res = await fetch(`${API}/avatars`);
-            const files: string[] = await res.json();
-            const grid = document.getElementById('avatar-grid')!;
-            grid.innerHTML = files.map(f => `
+  const renderAvatars = async () => {
+    try {
+      const res = await fetch(`${API}/avatars`);
+      const files: string[] = await res.json();
+      const grid = document.getElementById('avatar-grid')!;
+      grid.innerHTML = files.map(f => `
                 <div class="avatar-opt ${f === selectedPfp ? 'selected' : ''}" data-pfp="${f}" style="width:100%; aspect-ratio:1; border:2px solid ${f === selectedPfp ? '#c8a840' : '#333'}; background:#000; cursor:pointer; overflow:hidden;">
                     <img src="/avatars/${f}" style="width:100%; height:100%; object-fit:cover;">
                 </div>
             `).join('');
 
-            grid.querySelectorAll('.avatar-opt').forEach(opt => opt.addEventListener('click', (e) => {
-                grid.querySelectorAll('.avatar-opt').forEach(o => (o as HTMLElement).style.borderColor = '#333');
-                const target = e.currentTarget as HTMLElement;
-                target.style.borderColor = '#c8a840';
-                selectedPfp = target.dataset.pfp!;
-            }));
-        } catch { console.error('Failed to load avatars'); }
-    };
-    renderAvatars();
+      grid.querySelectorAll('.avatar-opt').forEach(opt => opt.addEventListener('click', (e) => {
+        grid.querySelectorAll('.avatar-opt').forEach(o => (o as HTMLElement).style.borderColor = '#333');
+        const target = e.currentTarget as HTMLElement;
+        target.style.borderColor = '#c8a840';
+        selectedPfp = target.dataset.pfp!;
+      }));
+    } catch { console.error('Failed to load avatars'); }
+  };
+  renderAvatars();
 
-    document.getElementById('btn-save-profile')?.addEventListener('click', async () => {
-        const bio = (document.getElementById('up-bio') as HTMLInputElement).value.trim();
-        const btn = document.getElementById('btn-save-profile') as HTMLButtonElement;
-        const err = document.getElementById('mp-err')!;
-        const ok = document.getElementById('mp-ok')!;
+  document.getElementById('btn-save-profile')?.addEventListener('click', async () => {
+    const bio = (document.getElementById('up-bio') as HTMLInputElement).value.trim();
+    const btn = document.getElementById('btn-save-profile') as HTMLButtonElement;
+    const err = document.getElementById('mp-err')!;
+    const ok = document.getElementById('mp-ok')!;
 
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
 
-        const res = await apiPost('/profile', { pfp: selectedPfp, bio }, true);
-        if (res.ok) {
-            const data = await res.json();
-            currentUser = data.user;
-            ok.textContent = 'Profile updated!';
-            ok.classList.add('show');
-            setTimeout(() => { mov.classList.remove('open'); setTimeout(() => { mov.remove(); renderPage(); }, 250); }, 1000);
-        } else {
-            err.textContent = 'Failed to update profile';
-            err.classList.add('show');
-            btn.disabled = false;
-            btn.textContent = 'Save Changes';
-        }
-    });
+    const res = await apiPost('/profile', { pfp: selectedPfp, bio }, true);
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user;
+      ok.textContent = 'Profile updated!';
+      ok.classList.add('show');
+      setTimeout(() => { mov.classList.remove('open'); setTimeout(() => { mov.remove(); renderPage(); }, 250); }, 1000);
+    } else {
+      err.textContent = 'Failed to update profile';
+      err.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Save Changes';
+    }
+  });
 }
 
 // ─── Utilities & Boot ──────────────────────────────────────────────────────
 function setupGlobalListeners() {
-    document.getElementById('hm-register')?.addEventListener('click', e => { e.preventDefault(); openAuthModal('register'); });
-    document.getElementById('lnk-acc')?.addEventListener('click', e => { e.preventDefault(); openAuthModal('login'); });
-    document.getElementById('btn-auth-forum')?.addEventListener('click', () => openAuthModal('login'));
-    document.getElementById('btn-new-thread')?.addEventListener('click', () => openNewThreadModal());
+  document.getElementById('hm-register')?.addEventListener('click', e => { e.preventDefault(); openAuthModal('register'); });
+  document.getElementById('lnk-acc')?.addEventListener('click', e => { e.preventDefault(); openAuthModal('login'); });
+  document.getElementById('btn-auth-forum')?.addEventListener('click', () => openAuthModal('login'));
+  document.getElementById('btn-new-thread')?.addEventListener('click', () => openNewThreadModal());
 }
 
 async function boot() {
-    await Promise.all([fetchMe(), fetchData()]);
-    renderPage();
+  await Promise.all([fetchMe(), fetchData()]);
+  renderPage();
 }
 
 window.addEventListener('hashchange', () => renderPage());
