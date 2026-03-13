@@ -272,7 +272,7 @@ if (fs.existsSync(DIST_DIR)) {
     // Serve public folder (avatars, slideshow, ads, etc.)
     app.use(express.static(path.join(__dirname, '../public')));
     // SPA fallback: any non-API route returns index.html
-    app.get('*', (_req, res) => {
+    app.get('/{*path}', (_req, res) => {
         res.sendFile(path.join(DIST_DIR, 'index.html'));
     });
     console.log(`Serving frontend from ${DIST_DIR}`);
