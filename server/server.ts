@@ -3,6 +3,7 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -278,5 +279,13 @@ if (fs.existsSync(DIST_DIR)) {
     console.log(`Serving frontend from ${DIST_DIR}`);
 }
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`TempleRS running on port ${PORT}`));
+// Listen on one or two ports.
+// PORT  = primary  (default 3001) — set in .env
+// PORT2 = secondary (default 8080) — set in .env, leave blank to disable
+const PORT  = process.env.PORT  || 3001;
+const PORT2 = process.env.PORT2;
+
+http.createServer(app).listen(PORT,  () => console.log(`TempleRS running on port ${PORT}`));
+if (PORT2) {
+    http.createServer(app).listen(PORT2, () => console.log(`TempleRS also running on port ${PORT2}`));
+}
