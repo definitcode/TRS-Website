@@ -1,4 +1,4 @@
-import './style.css';
+﻿import './style.css';
 import { marked } from 'marked';
 import type { NewsPost, ForumThread, ShopItem, UpdateItem, WikiArticle, AuthUser } from './types';
 
@@ -200,25 +200,16 @@ async function renderHome() {
   const ad1 = adImages.length > 0 ? `<img src="/ads/${adImages[0]}" style="height:100%; width:auto; display:block; margin:0 auto; object-fit:contain;">` : '<div>Ad Space</div>';
   const ad2 = adImages.length > 1 ? `<img src="/ads/${adImages[1]}" style="height:100%; width:auto; display:block; margin:0 auto; object-fit:contain;">` : (adImages.length > 0 ? ad1 : '<div>Ad Space</div>');
 
-  // Pre-render home page news previews as markdown
-  const homeNewsPreviews = await Promise.all(newsPosts.slice(0, 3).map(async p => {
-    let processedContent = p.content;
-    processedContent = processedContent.replace(/:([a-zA-Z0-9_]+):/gi, (match, p1) => {
-      const ef = websiteEmojis.find(e => e.toLowerCase().startsWith(p1.toLowerCase() + '.'));
-      if (ef) return `<img src="/emojis/${ef}" style="height:18px; vertical-align:middle;" alt="${p1}">`;
-      return match;
-    });
-    const contentHtml = await marked.parse(processedContent);
-    return `
-      <div style="border:1px solid #2a2c2e;background:#131415;margin-bottom:12px;">
-        <div class="news-head" style="padding:8px 12px;background:#1a1c1e;display:flex;justify-content:space-between;align-items:center;">
-          <span style="color:#FFE139;font-weight:bold;font-size:14px;">${p.title} <span class="thread-cat-tag" style="font-size:10px;margin-left:8px;">${p.category || 'General'}</span></span>
-          <span style="font-size:11px;color:#888;">${p.date}</span>
-        </div>
-        <div class="news-body wiki-content" style="padding:12px 16px;color:#ccc;line-height:1.6;border-top:1px solid #2a2c2e;font-size:13px;">${contentHtml}</div>
-      </div>
-    `;
-  }));
+  // Home page news previews — title + link only (no full content)
+  const homeNewsPreviews = newsPosts.slice(0, 5).map(p => `
+    <div style="border-bottom:1px solid #222;padding:8px 4px;display:flex;justify-content:space-between;align-items:center;">
+      <span>
+        <a href="#news" class="lnk-green" style="font-weight:bold;font-size:13px;">${p.title}</a>
+        <span class="thread-cat-tag" style="font-size:10px;margin-left:6px;">${p.category || 'General'}</span>
+      </span>
+      <span style="font-size:11px;color:#888;flex-shrink:0;margin-left:10px;">${p.date}</span>
+    </div>
+  `);
 
   return `
     <div id="logo-bar">
@@ -278,10 +269,37 @@ async function renderHome() {
     <!-- Top Columns -->
     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom: 24px;">
       
+    <!-- Discord Registration Notice -->
+    <div class="panel" style="width:100%; margin-bottom:16px; border-color:#4752C4; box-sizing:border-box;">
+      <div class="panel-header" style="background:linear-gradient(90deg,#3c3f8f 0%,#5865F2 100%); color:#fff; display:flex; align-items:center; gap:10px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.053a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+        How to Create an Account
+      </div>
+      <div class="panel-body" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:220px;">
+          <div style="font-size:13px; color:#ccc; line-height:1.7;">
+            <b style="color:#FFE139;">Account registration is done through our Discord server.</b><br>
+            To get started, join the Discord and use the <span style="color:#5865F2; background:#1a1c2e; border:1px solid #4752C4; border-radius:3px; padding:1px 6px; font-family:monospace; font-size:12px;">/setname</span> command in the <b style="color:#aaa;">Discord</b> channel. Your account will be created and you can log in here right away.
+          </div>
+          <div style="margin-top:10px; font-size:11px; color:#666;">
+            Already registered? Use the <b style="color:#aaa;">Login / Register</b> button at the top of the page.
+          </div>
+        </div>
+        <div style="text-align:center; flex-shrink:0;">
+          <a href="https://discord.gg/qpcenn4W6P" target="_blank"
+             style="display:inline-flex; align-items:center; gap:8px; background:#5865F2; border:1px solid #4752C4; color:#fff; font-weight:bold; font-size:13px; padding:10px 20px; text-decoration:none; transition:background 0.2s;"
+             onmouseover="this.style.background='#4752C4'" onmouseout="this.style.background='#5865F2'">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.053a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+            Join Discord to Register
+          </a>
+          <div style="font-size:10px; color:#555; margin-top:6px;">discord.gg/qpcenn4W6P</div>
+        </div>
+      </div>
+    </div>
       <div class="panel" style="width:100%; margin-bottom:24px;">
         <div class="panel-header">Latest News & Updates</div>
         <div class="panel-body">
-          ${homeNewsPreviews.join('') || '<div style="color:#888;text-align:center;padding:10px">No news stories found.</div>'}
+          ${homeNewsPreviews.length ? homeNewsPreviews.join('') : '<div style="color:#888;text-align:center;padding:10px">No news stories found.</div>'}
           <div style="text-align:center;margin-top:10px;">
             To view a full list of news, <a href="#news" class="lnk-green">Click Here</a>.
           </div>
@@ -354,13 +372,13 @@ async function renderNews() {
         <div style="border:1px solid #2a2c2e;background:#131415;margin-bottom:8px;">
           <div class="news-head" style="padding:8px 12px;background:#1a1c1e;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;"
                onclick="const b=document.getElementById('${uid}'); const open=b.style.display!=='none'; b.style.display=open?'none':'block'; this.querySelector('.news-chevron').textContent=open?'▸':'▾';">
-            <span style="color:#90c040;font-weight:bold;font-size:14px;">
+            <span style="color:#90c040;font-weight:bold;font-size:14px;flex:1;min-width:0;">
               <span class="news-chevron" style="color:#c8a840;margin-right:6px;font-size:12px;">${startOpen ? '▾' : '▸'}</span>
               ${p.title} <span class="thread-cat-tag" style="font-size:10px;">${p.category || 'General'}</span>
             </span>
-            <span style="font-size:11px;color:#888;">${p.date}</span>
+            <span style="font-size:11px;color:#888;flex-shrink:0;margin-left:12px;">${p.date}</span>
           </div>
-          <div id="${uid}" class="news-body wiki-content" style="padding:14px 16px;color:#ccc;line-height:1.7;border-top:1px solid #2a2c2e;display:${startOpen ? 'block' : 'none'};">${contentHtml}</div>
+          <div id="${uid}" class="news-body wiki-content" style="padding:14px 16px;color:#ccc;line-height:1.7;border-top:1px solid #2a2c2e;display:${startOpen ? 'block' : 'none'};word-break:break-word;overflow-wrap:break-word;">${contentHtml}</div>
         </div>
       `;
     }));
@@ -373,7 +391,7 @@ async function renderNews() {
   }));
 
   return `
-    <div style="padding-top:10px">
+    <div style="padding-top:10px; display:block;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>News</span></div>
       
       <div class="panel w100">
@@ -386,18 +404,25 @@ async function renderNews() {
   `;
 }
 
-// Called after news HTML is in the DOM — locks min-height to prevent layout shift on collapse
+// Called after news HTML is in the DOM — locks min-height AND min-width to prevent layout shifts on collapse
 function lockNewsPanelHeight() {
   const panel = document.getElementById('news-panel-body');
   if (!panel) return;
-  // First, open all bodies so we can measure the full height
+  // Temporarily open all bodies so we can measure the full expanded size
   const bodies = panel.querySelectorAll<HTMLElement>('.news-body');
   bodies.forEach(b => { b.dataset.wasHidden = b.style.display === 'none' ? '1' : '0'; b.style.display = 'block'; });
-  // Measure full height after a paint
+  // Measure after a paint — capture both full width AND height while everything is visible
   requestAnimationFrame(() => {
     const fullHeight = panel.scrollHeight;
+    const fullWidth = panel.scrollWidth;
     panel.style.minHeight = fullHeight + 'px';
-    // Restore original state
+    panel.style.minWidth = fullWidth + 'px';
+    // Also lock the parent panel container so the outer border/box doesn't shrink
+    const outerPanel = panel.closest<HTMLElement>('.panel');
+    if (outerPanel) {
+      outerPanel.style.minWidth = outerPanel.scrollWidth + 'px';
+    }
+    // Restore original collapse state
     bodies.forEach(b => { if (b.dataset.wasHidden === '1') b.style.display = 'none'; });
   });
 }
@@ -421,7 +446,7 @@ async function renderWiki(container: HTMLElement, hash: string) {
     const contentHtml = await marked.parse(processedContent);
 
     container.innerHTML = `
-      <div style="padding-top:10px">
+      <div style="padding-top:10px; display:block;">
         <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#wiki">Wiki</a><span class="bc-sep">&gt;</span><span>${article.category}</span></div>
         <div class="panel w100">
           <div class="panel-header" style="text-align:left">${article.title} <span class="thread-cat-tag">${article.category}</span></div>
@@ -434,7 +459,7 @@ async function renderWiki(container: HTMLElement, hash: string) {
     `;
   } else {
     container.innerHTML = `
-      <div style="padding-top:10px">
+      <div style="padding-top:10px; display:block;">
         <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Wiki Hub</span></div>
         <div class="panel w100">
           <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
@@ -485,7 +510,7 @@ async function renderWiki(container: HTMLElement, hash: string) {
 // ─── Forums ────────────────────────────────────────────────────────────────
 async function renderForumIndex(container: HTMLElement) {
   container.innerHTML = `
-    <div style="padding-top:10px">
+    <div style="padding-top:10px; display:block;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Forums</span></div>
       <div class="panel w100">
         <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
@@ -657,7 +682,7 @@ async function renderThread(container: HTMLElement, threadId: number) {
     const controlsHTML = getEditorControlsHTML();
 
     container.innerHTML = `
-      <div style="padding-top:10px">
+      <div style="padding-top:10px; display:block;">
         <div class="breadcrumb">
           <a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#forum">Forums</a><span class="bc-sep">&gt;</span><span>${thread.title}</span>
         </div>
@@ -848,7 +873,7 @@ async function renderThread(container: HTMLElement, threadId: number) {
 // ─── Shop ─────────────────────────────────────────────────────────────────
 function renderShopPage(container: HTMLElement) {
   container.innerHTML = `
-    <div style="padding-top:10px">
+    <div style="padding-top:10px; display:block;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Store</span></div>
       <div class="panel w100">
         <div class="panel-header">Premium Emporium</div>
@@ -877,7 +902,7 @@ function renderShopPage(container: HTMLElement) {
 // ─── Footer Pages ────────────────────────────────────────────────────────
 function renderDisclaimerPage() {
   return `
-    <div style="padding-top:10px; text-align:left;">
+    <div style="padding-top:10px; display:block; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Disclaimer</span></div>
       <div class="panel w100">
         <div class="panel-header">Non-affiliation Disclaimer</div>
@@ -896,7 +921,7 @@ function renderDisclaimerPage() {
 
 function renderRulesPage() {
   return `
-    <div style="padding-top:10px; text-align:left;">
+    <div style="padding-top:10px; display:block; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Rules</span></div>
       <div class="panel w100">
         <div class="panel-header">Community Rules &amp; Guidelines</div>
@@ -941,7 +966,7 @@ function renderRulesPage() {
 
 function renderDiscordPage() {
   return `
-    <div style="padding-top:10px; text-align:left;">
+    <div style="padding-top:10px; display:block; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Discord</span></div>
       <div class="panel w100">
         <div class="panel-header">Join Our Community</div>
@@ -972,7 +997,7 @@ function renderDiscordPage() {
 
 function renderPrivacyPage() {
   return `
-    <div style="padding-top:10px; text-align:left;">
+    <div style="padding-top:10px; display:block; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Privacy Policy</span></div>
       <div class="panel w100">
         <div class="panel-header">Privacy Policy</div>
@@ -1145,8 +1170,14 @@ function openAuthModal(tab: 'login' | 'register' = 'login') {
 
           <form id="f-register" style="${tab === 'register' ? '' : 'display:none'}">
             <div class="form-row"><span class="form-lbl">Username</span><input type="text" id="r-usr" class="form-inp"></div>
-            <div class="form-row"><span class="form-lbl">Email</span><input type="email" id="r-eml" class="form-inp"></div>
+            <div class="form-row">
+              <span class="form-lbl">Email <span style="color:#888; font-size:10px; font-weight:normal;">(optional)</span></span>
+              <input type="email" id="r-eml" class="form-inp" placeholder="you@example.com">
+            </div>
             <div class="form-row"><span class="form-lbl">Password</span><input type="password" id="r-pwd" class="form-inp"></div>
+            <div style="background:#1a1c1e; border:1px solid #333; border-left:3px solid #c8a840; padding:8px 10px; margin:10px 0 4px 0; font-size:11px; color:#aaa; line-height:1.5;">
+              <b style="color:#FFE139;">&#9432; Note:</b> This creates a <b style="color:#fff;">website account only</b> and does not grant access to the game. To create a game account, join our <a href="https://discord.gg/qpcenn4W6P" target="_blank" style="color:#5865F2;">Discord</a> and use <span style="font-family:monospace; color:#5865F2;">/setname</span> in Discord.
+            </div>
             <button class="btn-red w100 mt-10" id="btn-rs">Create Account</button>
           </form>
         </div>
@@ -1183,9 +1214,9 @@ function openAuthModal(tab: 'login' | 'register' = 'login') {
   fr.addEventListener('submit', async e => {
     e.preventDefault();
     const [u, em, p] = [(document.getElementById('r-usr') as HTMLInputElement).value, (document.getElementById('r-eml') as HTMLInputElement).value, (document.getElementById('r-pwd') as HTMLInputElement).value];
-    if (!u || !em || !p) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
+    if (!u || !p) { err.textContent = 'Username and password are required'; err.classList.add('show'); return; }
     document.getElementById('btn-rs')!.innerHTML = '<span class="spinner"></span>';
-    const res = await apiPost('/register', { username: u, email: em, password: p });
+    const res = await apiPost('/setname', { username: u, email: em, password: p });
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error; err.classList.add('show'); document.getElementById('btn-rs')!.textContent = 'Create Account'; return; }
     authToken = data.token; currentUser = data.user; localStorage.setItem('trs_token', data.token);
@@ -1200,7 +1231,13 @@ function getEditorControlsHTML() {
     <div style="position:relative; display:inline-block;" class="emoji-dropdown-container">
       <button class="editor-btn-emoji-toggle" title="Emojis" style="background:#222; border:1px solid #444; color:#fff; cursor:pointer;">😀 Emojis</button>
       <div class="emoji-dropdown panel" style="display:none; position:absolute; top:100%; left:0; z-index:100; padding:6px; margin-top:4px; gap:4px; flex-wrap:wrap; max-width:260px; background:#111; border:1px solid #333;">
-        ${hasEmojis ? websiteEmojis.map(e => `<img src="/emojis/${e}" style="height:24px; cursor:pointer;" class="emoji-picker-btn" data-tag=":${e.split('.')[0]}:" title=":${e.split('.')[0]}:">`).join('') : '<span style="color:#888;font-size:11px;padding:4px;">No emojis loaded</span>'}
+        ${hasEmojis ? (() => {
+          const PINNED = ['thumbsup', 'thumbsdown'];
+          const pinned = PINNED.map(name => websiteEmojis.find(e => e.toLowerCase().startsWith(name + '.'))).filter(Boolean) as string[];
+          const rest = websiteEmojis.filter(e => !PINNED.some(name => e.toLowerCase().startsWith(name + '.')));
+          const toBtn = (e: string) => `<img src="/emojis/${e}" style="height:24px; cursor:pointer;" class="emoji-picker-btn" data-tag=":${e.split('.')[0]}:" title=":${e.split('.')[0]}:">`;
+          return pinned.map(toBtn).join('') + (pinned.length ? '<span style="display:inline-block;width:1px;height:24px;background:#333;margin:0 4px;vertical-align:middle;"></span>' : '') + rest.map(toBtn).join('');
+        })() : '<span style="color:#888;font-size:11px;padding:4px;">No emojis loaded</span>'}
       </div>
     </div>
   `;
@@ -1557,7 +1594,7 @@ function renderAccountPage(container: HTMLElement) {
   if (!currentUser) { window.location.hash = '#home'; return; }
 
   container.innerHTML = `
-    <div style="padding-top:10px">
+    <div style="padding-top:10px; display:block;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Account Services</span></div>
       
       <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap">

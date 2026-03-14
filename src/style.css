@@ -283,6 +283,19 @@ body:has(#play-main-content) #top-nav {
   box-sizing: border-box;
 }
 
+/* Ensure SPA page content always fills the full container width */
+#page-content {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+/* All top-level wrapper divs injected by the router should be block-level */
+#page-content > div {
+  display: block;
+  width: 100%;
+}
+
 /* ── Section panels ── */
 .panel {
   display: inline-block;
@@ -291,6 +304,11 @@ body:has(#play-main-content) #top-nav {
   border: 1px solid #2a2c2e;
   text-align: left;
   box-sizing: border-box;
+}
+
+/* Full-width panels inside the SPA router always render as proper blocks */
+#page-content .panel.w100 {
+  display: block;
 }
 
 .panel-header {

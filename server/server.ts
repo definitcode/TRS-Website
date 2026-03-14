@@ -144,7 +144,7 @@ function rateLimiter(limit: number, windowMs: number) {
 // Auth Routes
 app.post('/api/register', rateLimiter(5, 60 * 60 * 1000), async (req, res) => {
     const { username, email, password } = req.body;
-    if (!username || !email || !password) { res.status(400).json({ error: 'All fields required' }); return; }
+    if (!username || !password) { res.status(400).json({ error: 'Username and password are required' }); return; }
     if (username.length < 3 || username.length > 12) { res.status(400).json({ error: 'Username must be 3-12 characters' }); return; }
 
     const users = readJson<User[]>(USERS_FILE);
