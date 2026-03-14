@@ -23,6 +23,8 @@ let recentUpdates: UpdateItem[] = [];
 let wikiArticles: WikiArticle[] = [];
 let slideshowImages: string[] = [];
 let adImages: string[] = [];
+let websiteEmojis: string[] = [];
+let replyToPostId: number | null = null;
 
 const CATEGORIES = ['Announcements', 'General', 'Market', 'Guides', 'Off-Topic', 'Bug Reports'];
 
@@ -36,19 +38,29 @@ const shopItems: ShopItem[] = [
 
 async function fetchData() {
   try {
-    const [nRes, uRes, wRes, sRes, aRes] = await Promise.all([
+    const [nRes, uRes, wRes, sRes, aRes, eRes] = await Promise.all([
       fetch(`${API}/news`).catch(() => null),
       fetch(`${API}/updates`).catch(() => null),
       fetch(`${API}/wiki`).catch(() => null),
       fetch(`${API}/slideshow`).catch(() => null),
-      fetch(`${API}/ads`).catch(() => null)
+      fetch(`${API}/ads`).catch(() => null),
+      fetch(`${API}/emojis`).catch(() => null)
     ]);
     if (nRes && nRes.ok) newsPosts = await nRes.json();
     if (uRes && uRes.ok) recentUpdates = await uRes.json();
     if (wRes && wRes.ok) wikiArticles = await wRes.json();
     if (sRes && sRes.ok) slideshowImages = await sRes.json();
     if (aRes && aRes.ok) adImages = await aRes.json();
-  } catch (e) { console.error('Error fetching data', e); }
+    if (eRes && eRes.ok) {
+      websiteEmojis = await eRes.json();
+    }
+    // Hardcoded fallback safety check: ensure common ones exist if fetch failed
+    const essentials = ['sweat.png', 'thumbsup.png', 'thumbsdown.png', 'joy.png', 'rage.png', 'heart.png'];
+    essentials.forEach(e => { if (!websiteEmojis.includes(e)) websiteEmojis.push(e); });
+  } catch (e) {
+    console.error('Error fetching data', e);
+    websiteEmojis = ['thumbsup.png', 'thumbsdown.png', 'joy.png', 'rage.png', 'heart.png', 'sweat.png'];
+  }
 }
 
 async function fetchMe() {
@@ -63,7 +75,31 @@ async function fetchMe() {
 async function apiPost(endpoint: string, body: object, auth = false) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (auth && authToken) headers['Authorization'] = `Bearer ${authToken}`;
-  return await fetch(`${API}${endpoint}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  const res = await fetch(`${API}${endpoint}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  return res;
+}
+
+async function apiDelete(endpoint: string, auth = false) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (auth && authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(`${API}${endpoint}`, { method: 'DELETE', headers });
+  return res;
+}
+
+async function apiPut(endpoint: string, body: object, auth = false) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (auth && authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  const res = await fetch(`${API}${endpoint}`, { method: 'PUT', headers, body: JSON.stringify(body) });
+  return res;
+}
+
+async function getJsonError(res: Response) {
+  try {
+    const data = await res.json();
+    return data.error || data.message || 'Unknown server error';
+  } catch {
+    return `Server returned ${res.status}: ${res.statusText}`;
+  }
 }
 
 // ─── Router ────────────────────────────────────────────────────────────────
@@ -100,18 +136,19 @@ async function renderPage() {
   }
 
 
-  if (hash === '#home') content.innerHTML = renderHome();
-  else if (hash === '#news') content.innerHTML = renderNews();
+  if (hash === '#home') { renderHome().then(html => { content.innerHTML = html; setupGlobalListeners(); }); return; }
+  else if (hash === '#news') { renderNews().then((html: string) => { content.innerHTML = html; setupGlobalListeners(); lockNewsPanelHeight(); }); return; }
   else if (hash.startsWith('#wiki')) renderWiki(content, hash);
   else if (hash === '#forum') { renderForumIndex(content); return; }
   else if (hash.startsWith('#thread-')) { renderThread(content, Number(hash.replace('#thread-', ''))); return; }
   else if (hash === '#shop') { renderShopPage(content); return; }
   else if (hash === '#play') { renderPlayPage(content); return; }
+  else if (hash === '#account' && currentUser) { renderAccountPage(content); return; }
   else if (hash === '#disclaimer') content.innerHTML = renderDisclaimerPage();
   else if (hash === '#rules') content.innerHTML = renderRulesPage();
   else if (hash === '#discord') content.innerHTML = renderDiscordPage();
   else if (hash === '#privacy') content.innerHTML = renderPrivacyPage();
-  else content.innerHTML = renderHome();
+  else { renderHome().then((html: string) => { content.innerHTML = html; setupGlobalListeners(); }); return; }
 
   setupGlobalListeners();
 }
@@ -124,7 +161,7 @@ function updateUserPanel() {
     panel.innerHTML = `
       <div style="display:flex; align-items:center; gap:10px;">
         <div style="width:32px; height:32px; border:1px solid #c8a840; background:#000; overflow:hidden; cursor:pointer;" id="btn-my-profile">
-            <img src="/avatars/${currentUser.pfp || 'default.png'}" style="width:100%; height:100%; object-fit:cover;">
+            <img src="/avatars/${currentUser.pfp || 'cabbage.png'}" style="width:100%; height:100%; object-fit:cover;">
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-start;">
             <span style="font-weight:bold;color:#90c040;font-size:12px">Signed in as: <span style="color:#fff">${currentUser.username}</span></span>
@@ -159,9 +196,29 @@ function updateUserPanel() {
 }
 
 // ─── Home ──────────────────────────────────────────────────────────────────
-function renderHome() {
+async function renderHome() {
   const ad1 = adImages.length > 0 ? `<img src="/ads/${adImages[0]}" style="height:100%; width:auto; display:block; margin:0 auto; object-fit:contain;">` : '<div>Ad Space</div>';
   const ad2 = adImages.length > 1 ? `<img src="/ads/${adImages[1]}" style="height:100%; width:auto; display:block; margin:0 auto; object-fit:contain;">` : (adImages.length > 0 ? ad1 : '<div>Ad Space</div>');
+
+  // Pre-render home page news previews as markdown
+  const homeNewsPreviews = await Promise.all(newsPosts.slice(0, 3).map(async p => {
+    let processedContent = p.content;
+    processedContent = processedContent.replace(/:([a-zA-Z0-9_]+):/gi, (match, p1) => {
+      const ef = websiteEmojis.find(e => e.toLowerCase().startsWith(p1.toLowerCase() + '.'));
+      if (ef) return `<img src="/emojis/${ef}" style="height:18px; vertical-align:middle;" alt="${p1}">`;
+      return match;
+    });
+    const contentHtml = await marked.parse(processedContent);
+    return `
+      <div style="border:1px solid #2a2c2e;background:#131415;margin-bottom:12px;">
+        <div class="news-head" style="padding:8px 12px;background:#1a1c1e;display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:#FFE139;font-weight:bold;font-size:14px;">${p.title} <span class="thread-cat-tag" style="font-size:10px;margin-left:8px;">${p.category || 'General'}</span></span>
+          <span style="font-size:11px;color:#888;">${p.date}</span>
+        </div>
+        <div class="news-body wiki-content" style="padding:12px 16px;color:#ccc;line-height:1.6;border-top:1px solid #2a2c2e;font-size:13px;">${contentHtml}</div>
+      </div>
+    `;
+  }));
 
   return `
     <div id="logo-bar">
@@ -224,16 +281,7 @@ function renderHome() {
       <div class="panel" style="width:100%; margin-bottom:24px;">
         <div class="panel-header">Latest News & Updates</div>
         <div class="panel-body">
-          ${newsPosts.slice(0, 3).map(p => `
-            <div style="border:1px solid #2a2c2e;background:#131415;margin-bottom:12px;">
-              <div class="news-head" style="padding:8px 12px;background:#1a1c1e;display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#FFE139;font-weight:bold;font-size:14px;">${p.title} <span class="thread-cat-tag" style="font-size:10px;margin-left:8px;padding:2px 6px;border-radius:3px;background:#000;border:1px solid #333;color:#ccc;">${p.category || 'General'}</span></span>
-                <span style="font-size:11px;color:#888;">${p.date}</span>
-              </div>
-              <div class="news-body" style="padding:12px;color:#ccc;line-height:1.5;border-top:1px solid #2a2c2e;white-space:pre-wrap;font-size:13px;">${p.content}</div>
-            </div>
-          `).join('')}
-          ${newsPosts.length === 0 ? '<div style="color:#888;text-align:center;padding:10px">No news stories found.</div>' : ''}
+          ${homeNewsPreviews.join('') || '<div style="color:#888;text-align:center;padding:10px">No news stories found.</div>'}
           <div style="text-align:center;margin-top:10px;">
             To view a full list of news, <a href="#news" class="lnk-green">Click Here</a>.
           </div>
@@ -246,7 +294,7 @@ function renderHome() {
           
           <div class="svc-item w100" style="margin:0 0 10px 0;">
             <div class="btn-stone" style="width:100%;margin-bottom:6px" id="lnk-acc">Account Services</div>
-            <div style="font-size:11px;color:#888">Manage your characters and memberships.</div>
+            <div style="font-size:11px;color:#888">Manage your character, bio and avatars.</div>
           </div>
 
           <div class="svc-item w100" style="margin:0 0 10px 0;">
@@ -283,24 +331,46 @@ function renderHome() {
 }, 5000);
 
 // ─── News ──────────────────────────────────────────────────────────────────
-function renderNews() {
+async function renderNews() {
   const grp: Record<string, NewsPost[]> = {};
   newsPosts.forEach(p => { const c = p.category || 'General'; if (!grp[c]) grp[c] = []; grp[c].push(p); });
 
-  const cats = Object.entries(grp).map(([cat, list]) => `
-    <div style="margin-bottom:16px;">
-      <div style="font-weight:bold;color:#c8a840;border-bottom:1px solid #302000;padding-bottom:4px;margin-bottom:8px;">${cat}</div>
-      ${list.map(p => `
+  let isFirst = true; // First post starts expanded
+
+  // Render markdown for each post
+  const catHTMLs = await Promise.all(Object.entries(grp).map(async ([cat, list]) => {
+    const postHTMLs = await Promise.all(list.map(async p => {
+      let processedContent = p.content;
+      processedContent = processedContent.replace(/:([a-zA-Z0-9_]+):/gi, (match, p1) => {
+        const ef = websiteEmojis.find(e => e.toLowerCase().startsWith(p1.toLowerCase() + '.'));
+        if (ef) return `<img src="/emojis/${ef}" style="height:20px; vertical-align:middle;" alt="${p1}" title=":${p1}:">`;
+        return match;
+      });
+      const contentHtml = await marked.parse(processedContent);
+      const startOpen = isFirst;
+      isFirst = false;
+      const uid = `news-body-${p.id}`;
+      return `
         <div style="border:1px solid #2a2c2e;background:#131415;margin-bottom:8px;">
-          <div class="news-head" style="padding:8px 12px;background:#1a1c1e;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="const c=this.nextElementSibling; c.style.display=c.style.display==='none'?'block':'none';">
-            <span style="color:#90c040;font-weight:bold;font-size:14px;">${p.title} <span style="font-size:10px;color:#888;">(Click to View)</span></span>
+          <div class="news-head" style="padding:8px 12px;background:#1a1c1e;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;"
+               onclick="const b=document.getElementById('${uid}'); const open=b.style.display!=='none'; b.style.display=open?'none':'block'; this.querySelector('.news-chevron').textContent=open?'▸':'▾';">
+            <span style="color:#90c040;font-weight:bold;font-size:14px;">
+              <span class="news-chevron" style="color:#c8a840;margin-right:6px;font-size:12px;">${startOpen ? '▾' : '▸'}</span>
+              ${p.title} <span class="thread-cat-tag" style="font-size:10px;">${p.category || 'General'}</span>
+            </span>
             <span style="font-size:11px;color:#888;">${p.date}</span>
           </div>
-          <div class="news-body" style="padding:12px;display:none;color:#ccc;line-height:1.5;border-top:1px solid #2a2c2e;white-space:pre-wrap;">${p.content}</div>
+          <div id="${uid}" class="news-body wiki-content" style="padding:14px 16px;color:#ccc;line-height:1.7;border-top:1px solid #2a2c2e;display:${startOpen ? 'block' : 'none'};">${contentHtml}</div>
         </div>
-      `).join('')}
-    </div>
-  `).join('');
+      `;
+    }));
+    return `
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:bold;color:#c8a840;border-bottom:1px solid #302000;padding-bottom:4px;margin-bottom:10px;">${cat}</div>
+        ${postHTMLs.join('')}
+      </div>
+    `;
+  }));
 
   return `
     <div style="padding-top:10px">
@@ -308,12 +378,28 @@ function renderNews() {
       
       <div class="panel w100">
         <div class="panel-header">News Archive</div>
-        <div class="panel-body">
-          ${newsPosts.length === 0 ? '<div style="text-align:center;padding:20px;color:#666">No news available.</div>' : cats}
+        <div class="panel-body" id="news-panel-body">
+          ${newsPosts.length === 0 ? '<div style="text-align:center;padding:20px;color:#666">No news available.</div>' : catHTMLs.join('')}
         </div>
       </div>
     </div>
   `;
+}
+
+// Called after news HTML is in the DOM — locks min-height to prevent layout shift on collapse
+function lockNewsPanelHeight() {
+  const panel = document.getElementById('news-panel-body');
+  if (!panel) return;
+  // First, open all bodies so we can measure the full height
+  const bodies = panel.querySelectorAll<HTMLElement>('.news-body');
+  bodies.forEach(b => { b.dataset.wasHidden = b.style.display === 'none' ? '1' : '0'; b.style.display = 'block'; });
+  // Measure full height after a paint
+  requestAnimationFrame(() => {
+    const fullHeight = panel.scrollHeight;
+    panel.style.minHeight = fullHeight + 'px';
+    // Restore original state
+    bodies.forEach(b => { if (b.dataset.wasHidden === '1') b.style.display = 'none'; });
+  });
 }
 
 // ─── Wiki ──────────────────────────────────────────────────────────────────
@@ -325,8 +411,14 @@ async function renderWiki(container: HTMLElement, hash: string) {
     const article = wikiArticles.find(a => a.id === id);
     if (!article) { container.innerHTML = '<div class="ta-c" style="padding:40px">Article not found.</div>'; return; }
 
-    // Parse markdown (async resolution might occur depending on extensions, standard marked usually resolves sync but await is safer with recent versions)
-    const contentHtml = await marked.parse(article.content);
+    // Parse markdown and replace custom emojis
+    let processedContent = article.content;
+    processedContent = processedContent.replace(/:([a-zA-Z0-9_]+):/g, (match, p1) => {
+      const ef = websiteEmojis.find(e => e.toLowerCase().startsWith(p1.toLowerCase() + '.'));
+      if (ef) return `<img src="/emojis/${ef}" style="height:24px; vertical-align:middle;" alt="${p1}" title=":${p1}:">`;
+      return match;
+    });
+    const contentHtml = await marked.parse(processedContent);
 
     container.innerHTML = `
       <div style="padding-top:10px">
@@ -454,40 +546,139 @@ async function renderThread(container: HTMLElement, threadId: number) {
   container.innerHTML = `<div class="ta-c" style="padding:40px"><div class="spinner"></div></div>`;
   try {
     const res = await fetch(`${API}/threads/${threadId}/posts`);
+    if (!res.ok) throw new Error('Failed to load thread data');
     const { thread, posts } = await res.json();
 
-    const pHTML = posts.map((p: any) => `
-      <div class="post-box">
-        <div class="post-author-panel">
-          <div class="post-avatar" style="border:1px solid #c8a840; overflow:hidden; background:#000;">
-            <img src="/avatars/${p.authorPfp || 'default.png'}" style="width:100%; height:100%; object-fit:cover;">
+    // Check if user has permission to delete thread
+    const canDeleteThread = currentUser && (currentUser.role === 'admin' || currentUser.role === 'mod');
+
+    const pHTMLs = await Promise.all(posts.map(async (p: any) => {
+      // Determine role styling
+      const rOrig = p.authorRole || 'user';
+      const rLower = rOrig.toLowerCase();
+      const roleName = rOrig.charAt(0).toUpperCase() + rOrig.slice(1);
+      let roleColor = '#aaa';
+      let roleWeight = 'normal';
+      let roleGlow = '';
+      if (rLower === 'admin' || (currentUser?.role === 'admin' && String(currentUser?.id) === String(p.authorId))) {
+        roleColor = '#ff3333';
+        roleWeight = '900';
+        roleGlow = 'text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); font-weight: 900 !important;';
+      } else if (rLower === 'mod') {
+        roleColor = '#44ff44';
+        roleWeight = 'bold';
+      }
+
+      const pAuthorIdStr = String(p.authorId);
+      const cUserIdStr = currentUser ? String(currentUser.id) : '';
+      const cUserRole = currentUser ? currentUser.role : 'user';
+
+      const canDeletePost = currentUser && (cUserRole === 'admin' || cUserRole === 'mod' || cUserIdStr === pAuthorIdStr);
+      const canEditPost = currentUser && (cUserRole === 'admin' || cUserRole === 'mod' || cUserIdStr === pAuthorIdStr);
+
+      // Parse markdown and replace custom emojis
+      let processedContent = p.content;
+      processedContent = processedContent.replace(/:([a-zA-Z0-9_]+):/gi, (match: string, p1: string) => {
+        const ef = websiteEmojis.find(e => e.toLowerCase().startsWith(p1.toLowerCase() + '.'));
+        if (ef) return `<img src="/emojis/${ef}" style="height:24px; vertical-align:middle;" alt="${p1}" title=":${p1}:">`;
+        return match;
+      });
+      const finalHTML = await marked.parse(processedContent);
+
+      const thumbUpReacts = p.reactions?.['thumbsup'] || [];
+      const thumbDownReacts = p.reactions?.['thumbsdown'] || [];
+      const hasThumbUp = currentUser && thumbUpReacts.map(String).includes(String(currentUser.id));
+      const hasThumbDown = currentUser && thumbDownReacts.map(String).includes(String(currentUser.id));
+
+      const thumbUpImg = websiteEmojis.find(e => e.toLowerCase() === 'thumbsup.png') ? '/emojis/' + websiteEmojis.find(e => e.toLowerCase() === 'thumbsup.png') : '';
+      const thumbDownImg = websiteEmojis.find(e => e.toLowerCase() === 'thumbsdown.png') ? '/emojis/' + websiteEmojis.find(e => e.toLowerCase() === 'thumbsdown.png') : '';
+
+      let reactionsHTML = `
+        <span class="post-reaction rxn-clk" data-post="${p.id}" data-emoji="thumbsup" style="display:inline-flex; align-items:center; background:${hasThumbUp ? '#2a1f00' : '#111'}; border:1px solid ${hasThumbUp ? '#c8a840' : '#333'}; border-radius:4px; padding:2px 6px; margin-right:4px; cursor:pointer; user-select:none; transition: transform 0.1s;" title="${thumbUpReacts.length} reactions">
+            ${thumbUpImg ? `<img src="${thumbUpImg}" style="height:14px; margin-right:4px; pointer-events:none;">` : `<span style="font-size:14px; margin-right:4px; pointer-events:none;">👍</span>`}
+            <span style="font-size:11px; color:${hasThumbUp ? '#FFE139' : '#aaa'}; pointer-events:none;">${thumbUpReacts.length}</span>
+        </span>
+        <span class="post-reaction rxn-clk" data-post="${p.id}" data-emoji="thumbsdown" style="display:inline-flex; align-items:center; background:${hasThumbDown ? '#2a1f00' : '#111'}; border:1px solid ${hasThumbDown ? '#c8a840' : '#333'}; border-radius:4px; padding:2px 6px; margin-right:4px; cursor:pointer; user-select:none; transition: transform 0.1s;" title="${thumbDownReacts.length} reactions">
+            ${thumbDownImg ? `<img src="${thumbDownImg}" style="height:14px; margin-right:4px; pointer-events:none;">` : `<span style="font-size:14px; margin-right:4px; display:inline-block; pointer-events:none;">👎</span>`}
+            <span style="font-size:11px; color:${hasThumbDown ? '#FFE139' : '#aaa'}; pointer-events:none;">${thumbDownReacts.length}</span>
+        </span>
+      `;
+
+      let contextHTML = '';
+      if (p.replyTo) {
+        const processedSnippet = p.replyTo.contentSnippet.replace(/:([a-zA-Z0-9_]+):/gi, (match: string, p1: string) => {
+          const ef = websiteEmojis.find(e => e.toLowerCase().startsWith(p1.toLowerCase() + '.'));
+          return ef ? `<img src="/emojis/${ef}" style="height:14px; vertical-align:middle;" alt="${p1}">` : match;
+        });
+        contextHTML = `
+            <div style="background:#1a1c1e; border-left:2px solid #c8a840; padding:6px 10px; margin-bottom:10px; font-size:12px; color:#aaa; font-style:italic;">
+              <span style="color:#FFE139; font-weight:bold; margin-right:6px;">@${p.replyTo.author}</span>
+              ${processedSnippet}
+            </div>
+          `;
+      }
+
+      return `
+        <div class="post-box" id="post-${p.id}">
+          <div class="post-author-panel">
+            <div class="post-avatar" style="border:1px solid ${rLower === 'admin' ? '#ff3333' : '#c8a840'}; overflow:hidden; background:#000;">
+              <img src="/avatars/${p.authorPfp || 'cabbage.png'}" style="width:100%; height:100%; object-fit:cover;">
+            </div>
+            <div class="post-author-name" style="color:${roleColor}; font-weight:${roleWeight}; font-size:13px; ${roleGlow}">
+              ${rLower === 'admin' ? `<span style="color:#ff2222; font-size:10px; display:block; margin-bottom:2px; font-weight:bold; letter-spacing:1px;">[ADMIN]</span>` : ''}
+              ${rLower === 'mod' ? `<span style="color:#44ff44; font-size:10px; display:block; margin-bottom:2px; font-weight:bold; letter-spacing:1px;">[MOD]</span>` : ''}
+              ${p.author}
+            </div>
+            <div class="post-role" style="color:${roleColor}; font-size:10px; opacity:0.7; margin-top:2px;">${roleName}</div>
+            ${p.authorBio ? `<div style="font-size:9px; color:#888; margin-top:8px; font-style:italic; padding:0 4px; border-top:1px solid #222; width:100%; text-align:center; padding-top:4px;">${p.authorBio}</div>` : ''}
           </div>
-          <div class="post-author-name">${p.author}</div>
-          <div class="post-role">Member</div>
-          ${p.authorBio ? `<div style="font-size:9px; color:#888; margin-top:8px; font-style:italic; padding:0 4px; border-top:1px solid #222; width:100%; text-align:center; padding-top:4px;">${p.authorBio}</div>` : ''}
+          <div class="post-content-panel" style="position:relative; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+              <div class="post-date text-muted">${new Date(p.createdAt).toLocaleString()} ${p.editedAt ? `<span style="margin-left:6px; font-style:italic; font-size:10px;">(Edited: ${new Date(p.editedAt).toLocaleString()})</span>` : ''}</div>
+              <div>
+                ${currentUser ? `<button class="btn-reply-post" data-id="${p.id}" data-author="${p.author}" style="cursor:pointer;background:none;border:none;color:#88c0ff;font-size:12px;margin-right:8px;">Reply</button>` : ''}
+                ${canEditPost ? `<button class="btn-edit-post" data-id="${p.id}" data-raw="${encodeURIComponent(p.content)}" style="cursor:pointer;background:none;border:none;color:#c8a840;font-size:12px;margin-right:8px;">Edit</button>` : ''}
+                ${canDeletePost ? `<button class="btn-del-post" data-id="${p.id}" style="cursor:pointer;background:none;border:none;color:#ff4444;font-size:12px;">Delete</button>` : ''}
+              </div>
+            </div>
+            ${contextHTML}
+            <div id="ptxt-${p.id}" class="post-text wiki-content" style="flex-grow:1;">
+              ${finalHTML}
+            </div>
+            
+            <div style="margin-top:12px; display:flex; align-items:center;">
+              ${reactionsHTML}
+            </div>
+          </div>
         </div>
-        <div class="post-content-panel">
-          <div class="post-date text-muted">${new Date(p.createdAt).toLocaleString()}</div>
-          <div class="post-text">${p.content}</div>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }));
+
+    const controlsHTML = getEditorControlsHTML();
 
     container.innerHTML = `
       <div style="padding-top:10px">
         <div class="breadcrumb">
           <a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#forum">Forums</a><span class="bc-sep">&gt;</span><span>${thread.title}</span>
         </div>
-        <div class="panel w100">
-          <div class="panel-header" style="text-align:left">${thread.title} <span class="thread-cat-tag">${thread.category}</span></div>
-          <div style="background:#0a0500">${pHTML}</div>
+        <div class="panel w100" style="position:relative;">
+          <div class="panel-header" style="text-align:left">
+            ${thread.title} <span class="thread-cat-tag">${thread.category}</span>
+            ${canDeleteThread ? `<button id="btn-del-thread" style="float:right; background:#ff4444; color:white; border:none; padding:2px 8px; cursor:pointer; font-size:11px; border-radius:2px;">Delete Thread</button>` : ''}
+          </div>
+          <div style="background:#0a0500">${pHTMLs.join('')}</div>
         </div>
         
         ${currentUser ? `
-          <div class="panel w100 mt-10">
+          <div class="panel w100 mt-10" id="reply-area">
             <div class="panel-header">Post a Reply</div>
             <div class="panel-body">
+              <div id="reply-to-ctx" style="display:none; background:#1a1c1e; border-left:2px solid #88c0ff; padding:8px 10px; margin-bottom:12px; font-size:12px; color:#aaa;">
+                Replying to <span id="rtc-author" style="color:#88c0ff; font-weight:bold; margin-right:8px;"></span>
+                <span id="rtc-cancel" style="cursor:pointer; color:#ff4444; text-decoration:underline;">Cancel</span>
+              </div>
               <div id="re-err" class="err-msg"></div>
+              ${controlsHTML}
               <textarea id="re-body" class="form-textarea mb-6"></textarea>
               <button id="btn-re-sub" class="btn-stone" data-id="${thread.id}">Submit Reply</button>
             </div>
@@ -501,16 +692,153 @@ async function renderThread(container: HTMLElement, threadId: number) {
     `;
 
     document.getElementById('btn-re-sub')?.addEventListener('click', async (e) => {
-      const btn = e.target as HTMLButtonElement;
+      const btn = e.currentTarget as HTMLButtonElement;
+      const tid = btn.getAttribute('data-id');
       const content = (document.getElementById('re-body') as HTMLInputElement).value.trim();
       const err = document.getElementById('re-err')!;
       if (!content) { err.textContent = 'Reply cannot be empty'; err.classList.add('show'); return; }
+      const oldTxt = btn.textContent;
       btn.disabled = true;
-      const res = await apiPost(`/threads/${btn.dataset.id}/posts`, { content }, true);
-      if (res.ok) renderThread(document.getElementById('page-content')!, threadId);
-      else { err.textContent = (await res.json()).error; err.classList.add('show'); btn.disabled = false; }
+      btn.innerHTML = '<span class="spinner"></span>';
+
+      try {
+        const payload: any = { content };
+        if (replyToPostId) payload.replyTo = replyToPostId;
+        const res = await apiPost(`/threads/${tid}/posts`, payload, true);
+        if (res.ok) {
+          replyToPostId = null;
+          renderThread(document.getElementById('page-content')!, threadId);
+        } else {
+          err.textContent = (await res.json()).error || 'Failed to post reply';
+          err.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = oldTxt;
+        }
+      } catch (error) {
+        err.textContent = 'Network error: Failed to post reply.';
+        err.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = oldTxt;
+      }
     });
     document.getElementById('btn-auth-reply')?.addEventListener('click', () => openAuthModal('login'));
+
+    document.getElementById('btn-del-thread')?.addEventListener('click', async () => {
+      if (!confirm('DANGER: This will permanently delete this thread and ALL replies. Continue?')) return;
+      try {
+        const res = await apiDelete(`/threads/${threadId}`, true);
+        if (res.ok) {
+          window.location.hash = '#forum';
+          renderPage();
+        } else {
+          const errMsg = await getJsonError(res);
+          alert('Error deleting thread: ' + errMsg);
+        }
+      } catch (err: any) { alert('Network error deleting thread: ' + err.message); }
+    });
+
+    document.querySelectorAll('.btn-del-post').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        if (!confirm('Are you sure you want to delete this specific post?')) return;
+        const target = e.currentTarget as HTMLElement;
+        const postId = target.getAttribute('data-id');
+        const oldTxt = target.textContent;
+        target.textContent = '...';
+
+        try {
+          const res = await apiDelete(`/threads/${threadId}/posts/${postId}`, true);
+          if (res.ok) {
+            renderThread(document.getElementById('page-content')!, threadId);
+          } else {
+            target.textContent = oldTxt;
+            const errMsg = await getJsonError(res);
+            alert('Failed to delete post: ' + errMsg);
+          }
+        } catch (error: any) {
+          target.textContent = oldTxt;
+          alert('Network error deleting post: ' + error.message);
+        }
+      });
+    });
+
+    // Handle replies
+    document.querySelectorAll('.btn-reply-post').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const postId = Number((e.currentTarget as HTMLElement).getAttribute('data-id'));
+        const author = (e.currentTarget as HTMLElement).getAttribute('data-author');
+        replyToPostId = postId;
+
+        const ctxBox = document.getElementById('reply-to-ctx')!;
+        ctxBox.style.display = 'block';
+        document.getElementById('rtc-author')!.textContent = author || '';
+        document.getElementById('reply-area')?.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('re-body')?.focus();
+      });
+    });
+
+    document.getElementById('rtc-cancel')?.addEventListener('click', () => {
+      replyToPostId = null;
+      document.getElementById('reply-to-ctx')!.style.display = 'none';
+      document.getElementById('re-body')?.focus();
+    });
+
+    // Handle reactions
+    document.querySelectorAll('.rxn-clk').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        if (!currentUser) return openAuthModal('login');
+        const target = e.currentTarget as HTMLElement;
+        const postId = target.getAttribute('data-post');
+        const emoji = target.getAttribute('data-emoji');
+        if (!postId || !emoji) return;
+
+        target.style.transform = 'scale(0.9)';
+        const res = await apiPost(`/threads/${threadId}/posts/${postId}/react`, { emoji }, true);
+        if (res.ok) {
+          renderThread(document.getElementById('page-content')!, threadId);
+        } else {
+          target.style.transform = 'scale(1)';
+          const data = await res.json();
+          alert('Reaction failed: ' + (data.error || 'Please try again.'));
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-edit-post').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const postId = target.getAttribute('data-id');
+        const content = decodeURIComponent(target.getAttribute('data-raw') || '');
+        const ptxt = document.getElementById(`ptxt-${postId}`);
+        if (!ptxt) return;
+
+        ptxt.innerHTML = `
+          <div style="margin-top:8px;">
+            ${getEditorControlsHTML()}
+            <textarea id="edit-body-${postId}" class="form-textarea mb-6">${content}</textarea>
+            <div>
+              <button class="btn-stone btn-save-edit" data-id="${postId}">Save</button>
+              <button class="btn-stone btn-cancel-edit" style="background:#555;" data-id="${postId}">Cancel</button>
+            </div>
+          </div>
+        `;
+        bindEditorControls(ptxt, `edit-body-${postId}`);
+
+        ptxt.querySelector('.btn-cancel-edit')?.addEventListener('click', () => {
+          renderThread(document.getElementById('page-content')!, threadId);
+        });
+
+        ptxt.querySelector('.btn-save-edit')?.addEventListener('click', async () => {
+          const newContent = (document.getElementById(`edit-body-${postId}`) as HTMLTextAreaElement).value.trim();
+          if (!newContent) return;
+          const sbtn = ptxt.querySelector('.btn-save-edit') as HTMLButtonElement;
+          sbtn.disabled = true;
+          await apiPut(`/threads/${threadId}/posts/${postId}`, { content: newContent }, true);
+          renderThread(document.getElementById('page-content')!, threadId);
+        });
+      });
+    });
+
+    bindEditorControls(document.getElementById('page-content'), 're-body');
 
   } catch {
     container.innerHTML = `<div class="ta-c col-red" style="padding:40px">Could not load thread.</div>`;
@@ -866,6 +1194,98 @@ function openAuthModal(tab: 'login' | 'register' = 'login') {
   });
 }
 
+function getEditorControlsHTML() {
+  const hasEmojis = websiteEmojis.length > 0;
+  const emojiPickerHTML = `
+    <div style="position:relative; display:inline-block;" class="emoji-dropdown-container">
+      <button class="editor-btn-emoji-toggle" title="Emojis" style="background:#222; border:1px solid #444; color:#fff; cursor:pointer;">😀 Emojis</button>
+      <div class="emoji-dropdown panel" style="display:none; position:absolute; top:100%; left:0; z-index:100; padding:6px; margin-top:4px; gap:4px; flex-wrap:wrap; max-width:260px; background:#111; border:1px solid #333;">
+        ${hasEmojis ? websiteEmojis.map(e => `<img src="/emojis/${e}" style="height:24px; cursor:pointer;" class="emoji-picker-btn" data-tag=":${e.split('.')[0]}:" title=":${e.split('.')[0]}:">`).join('') : '<span style="color:#888;font-size:11px;padding:4px;">No emojis loaded</span>'}
+      </div>
+    </div>
+  `;
+
+  const editorToolbarHTML = `
+    <div style="margin-bottom:4px; display:flex; gap:4px; background:#111; padding:4px; border:1px solid #333; border-bottom:none; align-items:center;">
+      <button class="editor-btn" data-tag="**" title="Bold" style="font-weight:bold; background:#222; border:1px solid #444; color:#fff; cursor:pointer; width:30px;">B</button>
+      <button class="editor-btn" data-tag="*" title="Italic" style="font-style:italic; background:#222; border:1px solid #444; color:#fff; cursor:pointer; width:30px;">I</button>
+      <button class="editor-btn-wrap" data-prefix="[" data-suffix="](url)" title="Link" style="background:#222; border:1px solid #444; color:#fff; cursor:pointer; padding:0 8px;">Link</button>
+      <button class="editor-btn-wrap" data-prefix="![alt](" data-suffix=")" title="Image" style="background:#222; border:1px solid #444; color:#fff; cursor:pointer; padding:0 8px;">Img</button>
+      ${emojiPickerHTML}
+    </div>
+  `;
+  return editorToolbarHTML;
+}
+
+function bindEditorControls(container: HTMLElement | null, textareaId: string) {
+  if (!container) return;
+  const textarea = document.getElementById(textareaId) as HTMLTextAreaElement;
+  if (!textarea) return;
+
+  container.querySelectorAll('.editor-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tag = (e.currentTarget as HTMLElement).getAttribute('data-tag');
+      if (!tag) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      textarea.value = text.substring(0, start) + tag + text.substring(start, end) + tag + text.substring(end);
+      textarea.focus();
+      textarea.selectionStart = start + tag.length;
+      textarea.selectionEnd = end + tag.length;
+    });
+  });
+
+  container.querySelectorAll('.editor-btn-wrap').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const prefix = (e.currentTarget as HTMLElement).getAttribute('data-prefix');
+      const suffix = (e.currentTarget as HTMLElement).getAttribute('data-suffix');
+      if (!prefix || !suffix) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      textarea.value = text.substring(0, start) + prefix + text.substring(start, end) + suffix + text.substring(end);
+      textarea.focus();
+      textarea.selectionStart = start + prefix.length;
+      textarea.selectionEnd = end + prefix.length;
+    });
+  });
+
+  container.querySelectorAll('.emoji-picker-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = e.currentTarget as HTMLElement;
+      const tag = target.getAttribute('data-tag');
+      if (!tag) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+      textarea.value = val.substring(0, start) + tag + val.substring(end);
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+
+      const dropdown = target.closest('.emoji-dropdown') as HTMLElement | null;
+      if (dropdown) dropdown.style.display = 'none';
+    });
+  });
+
+  container.querySelectorAll('.editor-btn-emoji-toggle').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const dropdown = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+      if (dropdown) {
+        const isShowing = dropdown.style.display === 'flex';
+        // Close all others first
+        document.querySelectorAll('.emoji-dropdown').forEach(d => (d as HTMLElement).style.display = 'none');
+        dropdown.style.display = isShowing ? 'none' : 'flex';
+      }
+    });
+  });
+}
+
 function openAdminModal() {
   document.getElementById('modal-admin')?.remove();
   const raw = `
@@ -887,20 +1307,22 @@ function openAdminModal() {
           <form id="f-news">
             <div class="form-row"><span class="form-lbl">News Title</span><input type="text" id="an-title" class="form-inp"></div>
             <div class="form-row"><span class="form-lbl">Category</span><input type="text" id="an-cat" class="form-inp" placeholder="e.g. Game Update"></div>
+            ${getEditorControlsHTML()}
             <div class="form-row"><span class="form-lbl">Content</span><textarea id="an-content" class="form-textarea" style="height:120px"></textarea></div>
-            <button class="btn-red w100 mt-10">Post News</button>
+            <button type="button" class="btn-red w100 mt-10" id="btn-post-news">Post News</button>
           </form>
 
           <form id="f-update" style="display:none">
             <div class="form-row"><span class="form-lbl">Update Title (Short)</span><input type="text" id="au-title" class="form-inp" placeholder="(e.g. Bugfixes #42)"></div>
-            <button class="btn-red w100 mt-10">Post Update</button>
+            <button type="button" class="btn-red w100 mt-10" id="btn-post-update">Post Update</button>
           </form>
 
           <form id="f-wiki" style="display:none">
             <div class="form-row"><span class="form-lbl">Wiki Title</span><input type="text" id="aw-title" class="form-inp"></div>
             <div class="form-row"><span class="form-lbl">Category</span><input type="text" id="aw-cat" class="form-inp" placeholder="e.g. Guides"></div>
+            ${getEditorControlsHTML()}
             <div class="form-row"><span class="form-lbl">Content</span><textarea id="aw-content" class="form-textarea" style="height:120px"></textarea></div>
-            <button class="btn-red w100 mt-10">Add Wiki Article</button>
+            <button type="button" class="btn-red w100 mt-10" id="btn-post-wiki">Add Wiki Article</button>
           </form>
         </div>
       </div>
@@ -913,6 +1335,9 @@ function openAdminModal() {
   const closeM = () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); };
   document.getElementById('ma-close')?.addEventListener('click', closeM);
 
+  bindEditorControls(document.getElementById('f-news'), 'an-content');
+  bindEditorControls(document.getElementById('f-wiki'), 'aw-content');
+
   const fn = document.getElementById('f-news')!, fu = document.getElementById('f-update')!, fw = document.getElementById('f-wiki')!;
   const mtN = document.getElementById('mat-news')!, mtU = document.getElementById('mat-update')!, mtW = document.getElementById('mat-wiki')!;
   const err = document.getElementById('ma-err')!, ok = document.getElementById('ma-ok')!;
@@ -921,50 +1346,77 @@ function openAdminModal() {
   mtU.addEventListener('click', () => { fu.style.display = 'block'; fn.style.display = 'none'; fw.style.display = 'none'; mtU.classList.add('active'); mtN.classList.remove('active'); mtW.classList.remove('active'); err.classList.remove('show'); ok.classList.remove('show'); });
   mtW.addEventListener('click', () => { fw.style.display = 'block'; fn.style.display = 'none'; fu.style.display = 'none'; mtW.classList.add('active'); mtN.classList.remove('active'); mtU.classList.remove('active'); err.classList.remove('show'); ok.classList.remove('show'); });
 
-  fn.addEventListener('submit', async e => {
-    e.preventDefault();
+  // News post button
+  document.getElementById('btn-post-news')?.addEventListener('click', async () => {
     const title = (document.getElementById('an-title') as HTMLInputElement).value.trim();
     const category = (document.getElementById('an-cat') as HTMLInputElement).value.trim() || 'General';
-    const content = (document.getElementById('an-content') as HTMLInputElement).value.trim();
-    if (!title || !content) { err.textContent = 'Fill fields'; err.classList.add('show'); return; }
+    const content = (document.getElementById('an-content') as HTMLTextAreaElement).value.trim();
+    err.classList.remove('show'); ok.classList.remove('show');
+    if (!title || !content) { err.textContent = 'Title and content are required'; err.classList.add('show'); return; }
+    const btn = document.getElementById('btn-post-news') as HTMLButtonElement;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     const res = await apiPost('/news', { title, category, content }, true);
-    if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
-    const news = await res.json();
-    newsPosts.unshift(news);
-    ok.textContent = 'News Posted!'; ok.classList.add('show'); err.classList.remove('show');
-    (document.getElementById('an-title') as HTMLInputElement).value = '';
-    (document.getElementById('an-content') as HTMLInputElement).value = '';
-    setTimeout(() => { if (window.location.hash === '#home' || window.location.hash === '#news') renderPage(); }, 500);
+    if (res.ok) {
+      const news = await res.json();
+      newsPosts.unshift(news);
+      ok.textContent = 'News Posted!'; ok.classList.add('show');
+      (document.getElementById('an-title') as HTMLInputElement).value = '';
+      (document.getElementById('an-content') as HTMLTextAreaElement).value = '';
+      btn.disabled = false; btn.textContent = 'Post News';
+      if (window.location.hash === '#home' || window.location.hash === '#news') renderPage();
+    } else {
+      const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      err.textContent = data.error || 'Failed to post news'; err.classList.add('show');
+      btn.disabled = false; btn.textContent = 'Post News';
+    }
   });
 
-  fu.addEventListener('submit', async e => {
-    e.preventDefault();
+  // Update post button
+  document.getElementById('btn-post-update')?.addEventListener('click', async () => {
     const title = (document.getElementById('au-title') as HTMLInputElement).value.trim();
-    if (!title) { err.textContent = 'Fill title'; err.classList.add('show'); return; }
+    err.classList.remove('show'); ok.classList.remove('show');
+    if (!title) { err.textContent = 'Title is required'; err.classList.add('show'); return; }
+    const btn = document.getElementById('btn-post-update') as HTMLButtonElement;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     const res = await apiPost('/updates', { title }, true);
-    if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
-    const upd = await res.json();
-    recentUpdates.unshift(upd);
-    ok.textContent = 'Update Posted!'; ok.classList.add('show'); err.classList.remove('show');
-    (document.getElementById('au-title') as HTMLInputElement).value = '';
-    setTimeout(() => { if (window.location.hash === '#home') renderPage(); }, 500);
+    if (res.ok) {
+      const upd = await res.json();
+      recentUpdates.unshift(upd);
+      ok.textContent = 'Update Posted!'; ok.classList.add('show');
+      (document.getElementById('au-title') as HTMLInputElement).value = '';
+      btn.disabled = false; btn.textContent = 'Post Update';
+      if (window.location.hash === '#home') renderPage();
+    } else {
+      const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      err.textContent = data.error || 'Failed to post update'; err.classList.add('show');
+      btn.disabled = false; btn.textContent = 'Post Update';
+    }
   });
 
-  fw.addEventListener('submit', async e => {
-    e.preventDefault();
+  // Wiki post button
+  document.getElementById('btn-post-wiki')?.addEventListener('click', async () => {
     const title = (document.getElementById('aw-title') as HTMLInputElement).value.trim();
     const category = (document.getElementById('aw-cat') as HTMLInputElement).value.trim();
-    const content = (document.getElementById('aw-content') as HTMLInputElement).value.trim();
-    if (!title || !category || !content) { err.textContent = 'Fill all fields'; err.classList.add('show'); return; }
+    const content = (document.getElementById('aw-content') as HTMLTextAreaElement).value.trim();
+    err.classList.remove('show'); ok.classList.remove('show');
+    if (!title || !category || !content) { err.textContent = 'All fields are required'; err.classList.add('show'); return; }
+    const btn = document.getElementById('btn-post-wiki') as HTMLButtonElement;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
     const res = await apiPost('/wiki', { title, category, content }, true);
-    if (!res.ok) { err.textContent = 'Failed to post'; err.classList.add('show'); return; }
-    const article = await res.json();
-    wikiArticles.push(article);
-    ok.textContent = 'Wiki Article Added!'; ok.classList.add('show'); err.classList.remove('show');
-    (document.getElementById('aw-title') as HTMLInputElement).value = '';
-    (document.getElementById('aw-cat') as HTMLInputElement).value = '';
-    (document.getElementById('aw-content') as HTMLInputElement).value = '';
-    setTimeout(() => { if (window.location.hash === '#wiki') renderPage(); }, 500);
+    if (res.ok) {
+      const article = await res.json();
+      wikiArticles.push(article);
+      ok.textContent = 'Wiki Article Added!'; ok.classList.add('show');
+      (document.getElementById('aw-title') as HTMLInputElement).value = '';
+      (document.getElementById('aw-cat') as HTMLInputElement).value = '';
+      (document.getElementById('aw-content') as HTMLTextAreaElement).value = '';
+      btn.disabled = false; btn.textContent = 'Add Wiki Article';
+      if (window.location.hash === '#wiki') renderPage();
+    } else {
+      const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      err.textContent = data.error || 'Failed to post wiki article'; err.classList.add('show');
+      btn.disabled = false; btn.textContent = 'Add Wiki Article';
+    }
   });
 }
 
@@ -983,6 +1435,7 @@ function openNewThreadModal() {
               <span class="form-lbl">Category</span>
               <select id="nt-cat" class="form-select">${c.map(x => `<option value="${x}">${x}</option>`).join('')}</select>
             </div>
+            ${getEditorControlsHTML()}
             <div class="form-row"><span class="form-lbl">Content</span><textarea id="nt-con" class="form-textarea"></textarea></div>
             <button class="btn-red w100" id="btn-nts">Post Thread</button>
           </form>
@@ -994,6 +1447,9 @@ function openNewThreadModal() {
   const mov = document.getElementById('modal-nt')!;
   requestAnimationFrame(() => mov.classList.add('open'));
   mov.querySelector('#mnt-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
+
+  bindEditorControls(document.getElementById('f-nt'), 'nt-con');
+
   mov.querySelector('#f-nt')?.addEventListener('submit', async e => {
     e.preventDefault();
     const btn = document.getElementById('btn-nts') as HTMLButtonElement;
@@ -1048,7 +1504,7 @@ function openProfileModal() {
   requestAnimationFrame(() => mov.classList.add('open'));
   document.getElementById('mp-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
 
-  let selectedPfp = currentUser.pfp || 'default.png';
+  let selectedPfp = currentUser.pfp || 'cabbage.png';
 
   const renderAvatars = async () => {
     try {
@@ -1096,10 +1552,69 @@ function openProfileModal() {
   });
 }
 
+// ─── Account Page ────────────────────────────────────────────────────────
+function renderAccountPage(container: HTMLElement) {
+  if (!currentUser) { window.location.hash = '#home'; return; }
+
+  container.innerHTML = `
+    <div style="padding-top:10px">
+      <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Account Services</span></div>
+      
+      <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap">
+        <div class="panel" style="flex:1; min-width:300px;">
+          <div class="panel-header">Profile Overview</div>
+          <div class="panel-body">
+            <div style="display:flex; align-items:center; gap:20px; margin-bottom:20px; padding:10px; background:#111; border:1px solid #222;">
+                <div style="width:80px; height:80px; border:2px solid #c8a840; background:#000;">
+                    <img src="/avatars/${currentUser.pfp || 'cabbage.png'}" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+                <div>
+                    <div style="font-size:18px; font-weight:bold; color:#fff;">${currentUser.username}</div>
+                    <div style="color:#90c040; font-size:12px; margin-top:2px; text-transform:capitalize;">${currentUser.role} Account</div>
+                    <div style="color:#FFE139; font-size:13px; margin-top:6px; font-weight:bold;">${COIN_ICON} ${currentUser.templeCoins.toLocaleString()} Temple Coins</div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom:15px">
+                <div style="font-weight:bold; color:#aaa; font-size:11px; margin-bottom:4px; text-transform:uppercase;">Bio</div>
+                <div style="padding:10px; background:#0a0a0a; border:1px solid #222; color:#ccc; font-size:13px; min-height:60px; font-style:italic;">
+                    ${currentUser.bio || 'This user has not set a bio yet.'}
+                </div>
+            </div>
+            
+            <button class="btn-stone w100" id="btn-acc-edit">Edit Profile & Avatar</button>
+          </div>
+        </div>
+
+        <div class="panel" style="width:250px;">
+          <div class="panel-header">Account Security</div>
+          <div class="panel-body">
+            <div style="font-size:12px; color:#888; margin-bottom:15px;">Manage your account credentials and security settings.</div>
+            <button class="btn-stone w100 mb-6" onclick="alert('Password change system is being updated.')">Change Password</button>
+            <button class="btn-stone w100" id="btn-acc-logout" style="background:#441a1a;">Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-acc-edit')?.addEventListener('click', openProfileModal);
+  document.getElementById('btn-acc-logout')?.addEventListener('click', () => {
+    authToken = null; currentUser = null; localStorage.removeItem('trs_token'); window.location.hash = '#home'; renderPage();
+  });
+}
+
 // ─── Utilities & Boot ──────────────────────────────────────────────────────
 function setupGlobalListeners() {
   document.getElementById('hm-register')?.addEventListener('click', e => { e.preventDefault(); openAuthModal('register'); });
-  document.getElementById('lnk-acc')?.addEventListener('click', e => { e.preventDefault(); openAuthModal('login'); });
+  document.getElementById('lnk-acc')?.addEventListener('click', e => {
+    e.preventDefault();
+    if (currentUser) {
+      window.location.hash = '#account';
+    } else {
+      openAuthModal('login');
+    }
+  });
   document.getElementById('btn-auth-forum')?.addEventListener('click', () => openAuthModal('login'));
   document.getElementById('btn-new-thread')?.addEventListener('click', () => openNewThreadModal());
 }
