@@ -23,28 +23,11 @@ const JWT_SECRET = 'temple_rs_secret_change_in_prod';
 // Ensure data directory and files exist
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, '[]');
-if (!fs.existsSync(THREADS_FILE)) fs.writeFileSync(THREADS_FILE, JSON.stringify([
-    { id: 1, title: 'Welcome to TempleRS', author: 'Mod Admin', authorId: 0, category: 'Announcements', replies: 0, views: 142, createdAt: '2026-03-01' }
-], null, 2));
+if (!fs.existsSync(THREADS_FILE)) fs.writeFileSync(THREADS_FILE, '[]');
 if (!fs.existsSync(POSTS_FILE)) fs.writeFileSync(POSTS_FILE, '[]');
-
-// Default news posts
-if (!fs.existsSync(NEWS_FILE)) fs.writeFileSync(NEWS_FILE, JSON.stringify([
-    { id: 1, title: 'TempleRS Beta is Live!', category: 'Behind the Scenes', date: '12-Mar-2026', content: 'Welcome to the beta testing phase of TempleRS. Please report any bugs on the forums.' },
-    { id: 2, title: 'Client Update Available', category: 'Game Update', date: '10-Mar-2026', content: 'Please re-download the client to get the latest cache fixes and map data.' }
-], null, 2));
-
-// Default recent updates list
-if (!fs.existsSync(UPDATES_FILE)) fs.writeFileSync(UPDATES_FILE, JSON.stringify([
-    { id: 1, title: 'Combat Beta Changes', date: '08-Mar-2026' },
-    { id: 2, title: 'New Area Released', date: '05-Mar-2026' },
-    { id: 3, title: 'Bugfixes #42', date: '01-Mar-2026' }
-], null, 2));
-
-// Default wiki data
-if (!fs.existsSync(WIKI_FILE)) fs.writeFileSync(WIKI_FILE, JSON.stringify([
-    { id: 1, title: 'Getting Started', category: 'Guides', content: 'Welcome to TempleRS. Here is how you play...', createdAt: new Date().toISOString() }
-], null, 2));
+if (!fs.existsSync(NEWS_FILE)) fs.writeFileSync(NEWS_FILE, '[]');
+if (!fs.existsSync(UPDATES_FILE)) fs.writeFileSync(UPDATES_FILE, '[]');
+if (!fs.existsSync(WIKI_FILE)) fs.writeFileSync(WIKI_FILE, '[]');
 
 function readJson<T>(file: string): T { return JSON.parse(fs.readFileSync(file, 'utf-8')); }
 function writeJson(file: string, data: unknown) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }

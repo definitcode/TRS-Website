@@ -32,8 +32,6 @@ const shopItems: ShopItem[] = [
   { id: 3, name: '20 Temple Coins', price: 20.00, description: 'Bonus pack! Excellent value.' },
   { id: 4, name: '50 Temple Coins', price: 50.00, description: 'The absolute best value.' },
   { id: 5, name: '100 Temple Coins', price: 100.00, description: 'Generous supporter pack.' },
-  { id: 6, name: '500 Temple Coins', price: 500.00, description: 'Exceptional supporter pack.' },
-  { id: 7, name: '1000 Temple Coins', price: 1000.00, description: 'Heroic supporter pack.' },
 ];
 
 async function fetchData() {
@@ -147,7 +145,7 @@ function updateUserPanel() {
             alert('Too many logout attempts. Please try again later.');
             return;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
       authToken = null; currentUser = null; localStorage.removeItem('trs_token'); window.location.hash = '#home'; renderPage();
     });
@@ -195,7 +193,7 @@ function renderHome() {
              <div class="panel" style="width:100%; margin-top:12px; box-sizing:border-box;">
                 <div class="panel-header">Welcome to TempleRS</div>
                 <div class="panel-body" style="text-align:center">
-                <div style="margin-bottom:12px;font-size:13px;color:#ccc">Experience the classic MMORPG adventure from 2004.<br>Thousands of players await you.</div>
+                <div style="margin-bottom:12px;font-size:13px;color:#ccc">Experience the classic MMORPG adventure from 2004.<br>A real adventure awaits you.</div>
                 
                 <div class="feat-item" style="text-align:center; width: auto; margin: 0 10px;">
                     <a href="#play" class="btn-red" style="width:160px; padding: 10px 0;">
@@ -223,25 +221,26 @@ function renderHome() {
     <!-- Top Columns -->
     <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom: 24px;">
       
-      <div class="panel" style="width:49%;">
+      <div class="panel" style="width:100%; margin-bottom:24px;">
         <div class="panel-header">Latest News & Updates</div>
         <div class="panel-body">
-          <table width="100%" cellpadding="2" cellspacing="0" style="font-size:12px">
-            ${recentUpdates.slice(0, 5).map(u => `
-              <tr>
-                <td><a href="#news" class="news-title-link">${u.title}</a></td>
-                <td align="right" class="news-date-cell">${u.date}</td>
-              </tr>
-            `).join('')}
-            ${recentUpdates.length === 0 ? '<tr><td style="color:#888;text-align:center;padding:10px">No updates found.</td></tr>' : ''}
-          </table>
+          ${newsPosts.slice(0, 3).map(p => `
+            <div style="border:1px solid #2a2c2e;background:#131415;margin-bottom:12px;">
+              <div class="news-head" style="padding:8px 12px;background:#1a1c1e;display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:#FFE139;font-weight:bold;font-size:14px;">${p.title} <span class="thread-cat-tag" style="font-size:10px;margin-left:8px;padding:2px 6px;border-radius:3px;background:#000;border:1px solid #333;color:#ccc;">${p.category || 'General'}</span></span>
+                <span style="font-size:11px;color:#888;">${p.date}</span>
+              </div>
+              <div class="news-body" style="padding:12px;color:#ccc;line-height:1.5;border-top:1px solid #2a2c2e;white-space:pre-wrap;font-size:13px;">${p.content}</div>
+            </div>
+          `).join('')}
+          ${newsPosts.length === 0 ? '<div style="color:#888;text-align:center;padding:10px">No news stories found.</div>' : ''}
           <div style="text-align:center;margin-top:10px;">
             To view a full list of news, <a href="#news" class="lnk-green">Click Here</a>.
           </div>
         </div>
       </div>
 
-      <div class="panel" style="width:49%;">
+      <div class="panel" style="width:100%;">
         <div class="panel-header">Secondary Features</div>
         <div class="panel-body ta-c">
           
