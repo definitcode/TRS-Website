@@ -278,8 +278,8 @@ async function renderHome() {
       <div class="panel-body" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
         <div style="flex:1; min-width:220px;">
           <div style="font-size:13px; color:#ccc; line-height:1.7;">
-            <b style="color:#FFE139;">Account registration is done through our Discord server.</b><br>
-            To get started, join the Discord and use the <span style="color:#5865F2; background:#1a1c2e; border:1px solid #4752C4; border-radius:3px; padding:1px 6px; font-family:monospace; font-size:12px;">/setname</span> command in the <b style="color:#aaa;">Discord</b> channel. Your account will be created and you can log in here right away.
+            <b style="color:#FFE139;">Account Whitelisting is done through our Discord server.</b><br>
+            To get started, join the Discord and use the <span style="color:#5865F2; background:#1a1c2e; border:1px solid #4752C4; border-radius:3px; padding:1px 6px; font-family:monospace; font-size:12px;">/setname</span> command in the <b style="color:#aaa;">Discord</b>. Your name will then be whitelisted and you can log in to the game world.
           </div>
           <div style="margin-top:10px; font-size:11px; color:#666;">
             Already registered? Use the <b style="color:#aaa;">Login / Register</b> button at the top of the page.
@@ -1136,7 +1136,7 @@ function renderPlayPage(container: HTMLElement) {
   const toggleHeaderLink = container.querySelector('#toggleHeaderLink')!;
   const playNavHeader = container.querySelector('#play-nav-header') as HTMLElement;
   const showHeaderFloat = container.querySelector('#showHeaderFloat') as HTMLElement;
-  
+
   toggleHeaderLink.addEventListener('click', (e) => {
     e.preventDefault();
     playNavHeader.style.display = 'none';
@@ -1251,12 +1251,12 @@ function getEditorControlsHTML() {
       <button class="editor-btn-emoji-toggle" title="Emojis" style="background:#222; border:1px solid #444; color:#fff; cursor:pointer;">😀 Emojis</button>
       <div class="emoji-dropdown panel" style="display:none; position:absolute; top:100%; left:0; z-index:100; padding:6px; margin-top:4px; gap:4px; flex-wrap:wrap; max-width:260px; background:#111; border:1px solid #333;">
         ${hasEmojis ? (() => {
-          const PINNED = ['thumbsup', 'thumbsdown'];
-          const pinned = PINNED.map(name => websiteEmojis.find(e => e.toLowerCase().startsWith(name + '.'))).filter(Boolean) as string[];
-          const rest = websiteEmojis.filter(e => !PINNED.some(name => e.toLowerCase().startsWith(name + '.')));
-          const toBtn = (e: string) => `<img src="/emojis/${e}" style="height:24px; cursor:pointer;" class="emoji-picker-btn" data-tag=":${e.split('.')[0]}:" title=":${e.split('.')[0]}:">`;
-          return pinned.map(toBtn).join('') + (pinned.length ? '<span style="display:inline-block;width:1px;height:24px;background:#333;margin:0 4px;vertical-align:middle;"></span>' : '') + rest.map(toBtn).join('');
-        })() : '<span style="color:#888;font-size:11px;padding:4px;">No emojis loaded</span>'}
+      const PINNED = ['thumbsup', 'thumbsdown'];
+      const pinned = PINNED.map(name => websiteEmojis.find(e => e.toLowerCase().startsWith(name + '.'))).filter(Boolean) as string[];
+      const rest = websiteEmojis.filter(e => !PINNED.some(name => e.toLowerCase().startsWith(name + '.')));
+      const toBtn = (e: string) => `<img src="/emojis/${e}" style="height:24px; cursor:pointer;" class="emoji-picker-btn" data-tag=":${e.split('.')[0]}:" title=":${e.split('.')[0]}:">`;
+      return pinned.map(toBtn).join('') + (pinned.length ? '<span style="display:inline-block;width:1px;height:24px;background:#333;margin:0 4px;vertical-align:middle;"></span>' : '') + rest.map(toBtn).join('');
+    })() : '<span style="color:#888;font-size:11px;padding:4px;">No emojis loaded</span>'}
       </div>
     </div>
   `;
