@@ -391,10 +391,10 @@ async function renderNews() {
   }));
 
   return `
-    <div style="padding-top:10px; display:block;">
-      <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>News</span></div>
+    <div>
+      <div class="breadcrumb" style="margin-top:10px;"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>News</span></div>
       
-      <div class="panel w100">
+      <div class="panel" style="width:100%; box-sizing:border-box;">
         <div class="panel-header">News Archive</div>
         <div class="panel-body" id="news-panel-body">
           ${newsPosts.length === 0 ? '<div style="text-align:center;padding:20px;color:#666">No news available.</div>' : catHTMLs.join('')}
@@ -446,9 +446,9 @@ async function renderWiki(container: HTMLElement, hash: string) {
     const contentHtml = await marked.parse(processedContent);
 
     container.innerHTML = `
-      <div style="padding-top:10px; display:block; width:100%; box-sizing:border-box; text-align:left;">
-        <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#wiki">Wiki</a><span class="bc-sep">&gt;</span><span>${article.category}</span></div>
-        <div class="panel w100" style="display:block; width:100%; box-sizing:border-box;">
+      <div>
+        <div class="breadcrumb" style="margin-top:10px;"><a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#wiki">Wiki</a><span class="bc-sep">&gt;</span><span>${article.category}</span></div>
+        <div class="panel" style="width:100%; box-sizing:border-box;">
           <div class="panel-header" style="text-align:left">${article.title} <span class="thread-cat-tag">${article.category}</span></div>
           <div class="panel-body">
             <div style="font-size:11px;color:#888;margin-bottom:12px;border-bottom:1px solid #333;padding-bottom:6px;">Created on: ${new Date(article.createdAt || '').toLocaleDateString()}</div>
@@ -459,9 +459,9 @@ async function renderWiki(container: HTMLElement, hash: string) {
     `;
   } else {
     container.innerHTML = `
-      <div style="padding-top:10px; display:block; width:100%; box-sizing:border-box; text-align:left;">
-        <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Wiki Hub</span></div>
-        <div class="panel w100" style="display:block; width:100%; box-sizing:border-box;">
+      <div>
+        <div class="breadcrumb" style="margin-top:10px;"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Wiki Hub</span></div>
+        <div class="panel" style="width:100%; box-sizing:border-box;">
           <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
              <span>TempleRS Knowledge Base</span>
              <input type="text" id="wiki-search" placeholder="Search wiki..." class="form-inp" style="width:200px;font-size:11px;padding:3px 6px;">
@@ -510,9 +510,9 @@ async function renderWiki(container: HTMLElement, hash: string) {
 // ─── Forums ────────────────────────────────────────────────────────────────
 async function renderForumIndex(container: HTMLElement) {
   container.innerHTML = `
-    <div style="padding-top:10px; display:block; width:100%; box-sizing:border-box; text-align:left;">
-      <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Forums</span></div>
-      <div class="panel w100" style="display:block; width:100%; box-sizing:border-box;">
+    <div>
+      <div class="breadcrumb" style="margin-top:10px;"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Forums</span></div>
+      <div class="panel" style="width:100%; box-sizing:border-box;">
         <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
           <span>Community Forums</span>
           ${currentUser ? `<button class="btn-stone" id="btn-new-thread" style="padding:2px 8px;font-size:11px">New Thread</button>` : `<button class="btn-stone" id="btn-auth-forum" style="padding:2px 8px;font-size:11px">Login to Post</button>`}
@@ -682,11 +682,11 @@ async function renderThread(container: HTMLElement, threadId: number) {
     const controlsHTML = getEditorControlsHTML();
 
     container.innerHTML = `
-      <div style="padding-top:10px; display:block; width:100%; box-sizing:border-box; text-align:left;">
-        <div class="breadcrumb">
+      <div>
+        <div class="breadcrumb" style="margin-top:10px;">
           <a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#forum">Forums</a><span class="bc-sep">&gt;</span><span>${thread.title}</span>
         </div>
-        <div class="panel w100" style="position:relative; display:block; width:100%; box-sizing:border-box;">
+        <div class="panel" style="position:relative; width:100%; box-sizing:border-box;">
           <div class="panel-header" style="text-align:left">
             ${thread.title} <span class="thread-cat-tag">${thread.category}</span>
             ${canDeleteThread ? `<button id="btn-del-thread" style="float:right; background:#ff4444; color:white; border:none; padding:2px 8px; cursor:pointer; font-size:11px; border-radius:2px;">Delete Thread</button>` : ''}
@@ -695,7 +695,7 @@ async function renderThread(container: HTMLElement, threadId: number) {
         </div>
         
         ${currentUser ? `
-          <div class="panel w100 mt-10" id="reply-area">
+          <div class="panel mt-10" id="reply-area" style="width:100%; box-sizing:border-box;">
             <div class="panel-header">Post a Reply</div>
             <div class="panel-body">
               <div id="reply-to-ctx" style="display:none; background:#1a1c1e; border-left:2px solid #88c0ff; padding:8px 10px; margin-bottom:12px; font-size:12px; color:#aaa;">
@@ -709,7 +709,7 @@ async function renderThread(container: HTMLElement, threadId: number) {
             </div>
           </div>
         ` : `
-          <div class="panel w100 mt-10">
+          <div class="panel mt-10" style="width:100%; box-sizing:border-box;">
             <div class="panel-body ta-c text-muted">You must be logged in to reply.<br><button class="btn-stone mt-6" id="btn-auth-reply">Login</button></div>
           </div>
         `}
