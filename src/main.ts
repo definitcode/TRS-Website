@@ -1,4 +1,4 @@
-﻿import './style.css';
+import './style.css';
 import { marked } from 'marked';
 import type { NewsPost, ForumThread, ShopItem, UpdateItem, WikiArticle, AuthUser } from './types';
 
@@ -446,9 +446,9 @@ async function renderWiki(container: HTMLElement, hash: string) {
     const contentHtml = await marked.parse(processedContent);
 
     container.innerHTML = `
-      <div style="padding-top:10px; display:block;">
+      <div style="padding-top:10px; display:block; width:100%; box-sizing:border-box; text-align:left;">
         <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#wiki">Wiki</a><span class="bc-sep">&gt;</span><span>${article.category}</span></div>
-        <div class="panel w100">
+        <div class="panel w100" style="display:block; width:100%; box-sizing:border-box;">
           <div class="panel-header" style="text-align:left">${article.title} <span class="thread-cat-tag">${article.category}</span></div>
           <div class="panel-body">
             <div style="font-size:11px;color:#888;margin-bottom:12px;border-bottom:1px solid #333;padding-bottom:6px;">Created on: ${new Date(article.createdAt || '').toLocaleDateString()}</div>
@@ -459,9 +459,9 @@ async function renderWiki(container: HTMLElement, hash: string) {
     `;
   } else {
     container.innerHTML = `
-      <div style="padding-top:10px; display:block;">
+      <div style="padding-top:10px; display:block; width:100%; box-sizing:border-box; text-align:left;">
         <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Wiki Hub</span></div>
-        <div class="panel w100">
+        <div class="panel w100" style="display:block; width:100%; box-sizing:border-box;">
           <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
              <span>TempleRS Knowledge Base</span>
              <input type="text" id="wiki-search" placeholder="Search wiki..." class="form-inp" style="width:200px;font-size:11px;padding:3px 6px;">
@@ -510,9 +510,9 @@ async function renderWiki(container: HTMLElement, hash: string) {
 // ─── Forums ────────────────────────────────────────────────────────────────
 async function renderForumIndex(container: HTMLElement) {
   container.innerHTML = `
-    <div style="padding-top:10px; display:block;">
+    <div style="padding-top:10px; display:block; width:100%; box-sizing:border-box; text-align:left;">
       <div class="breadcrumb"><a href="#home">Home</a><span class="bc-sep">&gt;</span><span>Forums</span></div>
-      <div class="panel w100">
+      <div class="panel w100" style="display:block; width:100%; box-sizing:border-box;">
         <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center">
           <span>Community Forums</span>
           ${currentUser ? `<button class="btn-stone" id="btn-new-thread" style="padding:2px 8px;font-size:11px">New Thread</button>` : `<button class="btn-stone" id="btn-auth-forum" style="padding:2px 8px;font-size:11px">Login to Post</button>`}
@@ -682,11 +682,11 @@ async function renderThread(container: HTMLElement, threadId: number) {
     const controlsHTML = getEditorControlsHTML();
 
     container.innerHTML = `
-      <div style="padding-top:10px; display:block;">
+      <div style="padding-top:10px; display:block; width:100%; box-sizing:border-box; text-align:left;">
         <div class="breadcrumb">
           <a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#forum">Forums</a><span class="bc-sep">&gt;</span><span>${thread.title}</span>
         </div>
-        <div class="panel w100" style="position:relative;">
+        <div class="panel w100" style="position:relative; display:block; width:100%; box-sizing:border-box;">
           <div class="panel-header" style="text-align:left">
             ${thread.title} <span class="thread-cat-tag">${thread.category}</span>
             ${canDeleteThread ? `<button id="btn-del-thread" style="float:right; background:#ff4444; color:white; border:none; padding:2px 8px; cursor:pointer; font-size:11px; border-radius:2px;">Delete Thread</button>` : ''}
@@ -1040,12 +1040,15 @@ function renderPlayPage(container: HTMLElement) {
   container.innerHTML = `
       <div class="play-container">
         <!-- Navigation bar -->
-        <div class="play-nav-bar">
-            <a href="#home" class="play-nav-btn">Main Menu</a>
-            <a href="https://discord.gg/sCnvbXVnMf" target="_blank" class="play-nav-btn">Discord</a>
-            <a href="#" onclick="window.open('https://mejrs.github.io/historical?era=rs2_2004_07_13&p=0&x=2944&y=3411&z=-1&m=-1&layer=grid', 'WorldMap', 'width=600,height=450,menubar=no,toolbar=no,location=no,status=no'); return false;" class="play-nav-btn">World Map</a>
-            <a href="#" class="play-nav-btn" id="toggleChatLink">Show Tools</a>
-            <a href="javascript:location.reload()" class="play-nav-btn">Refresh</a>
+        <div class="play-nav-bar" id="play-nav-header" style="display:flex; justify-content:center; gap:8px;">
+            <div id="play-nav-buttons" style="display:flex; gap:8px;">
+                <a href="#home" class="play-nav-btn">Main Menu</a>
+                <a href="https://discord.gg/sCnvbXVnMf" target="_blank" class="play-nav-btn">Discord</a>
+                <a href="#" onclick="window.open('https://mejrs.github.io/historical?era=rs2_2004_07_13&p=0&x=2944&y=3411&z=-1&m=-1&layer=grid', 'WorldMap', 'width=600,height=450,menubar=no,toolbar=no,location=no,status=no'); return false;" class="play-nav-btn">World Map</a>
+                <a href="#" class="play-nav-btn" id="toggleChatLink">Show Tools</a>
+                <a href="javascript:location.reload()" class="play-nav-btn">Refresh</a>
+            </div>
+            <a href="#" class="play-nav-btn" id="toggleHeaderLink">Hide Header</a>
         </div>
 
         <!-- Main content area -->
@@ -1127,6 +1130,16 @@ function renderPlayPage(container: HTMLElement) {
     e.preventDefault();
     const isHidden = playMain.classList.toggle('chat-hidden');
     toggleLink.textContent = isHidden ? 'Show Tools' : 'Hide Tools';
+  });
+
+  // Header toggle
+  const toggleHeaderLink = container.querySelector('#toggleHeaderLink')!;
+  const playNavButtons = container.querySelector('#play-nav-buttons') as HTMLElement;
+  toggleHeaderLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    const isHidden = playNavButtons.style.display === 'none';
+    playNavButtons.style.display = isHidden ? 'flex' : 'none';
+    toggleHeaderLink.textContent = isHidden ? 'Hide Header' : 'Show Header';
   });
 
   // Tab switching
