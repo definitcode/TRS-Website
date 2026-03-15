@@ -1040,20 +1040,20 @@ function renderPlayPage(container: HTMLElement) {
   container.innerHTML = `
       <div class="play-container">
         <!-- Navigation bar -->
+        <!-- Navigation bar -->
         <div class="play-nav-bar" id="play-nav-header" style="display:flex; justify-content:center; gap:8px;">
-            <div id="play-nav-buttons" style="display:flex; gap:8px;">
-                <a href="#home" class="play-nav-btn">Main Menu</a>
-                <a href="https://discord.gg/sCnvbXVnMf" target="_blank" class="play-nav-btn">Discord</a>
-                <a href="#" onclick="window.open('https://mejrs.github.io/historical?era=rs2_2004_07_13&p=0&x=2944&y=3411&z=-1&m=-1&layer=grid', 'WorldMap', 'width=600,height=450,menubar=no,toolbar=no,location=no,status=no'); return false;" class="play-nav-btn">World Map</a>
-                <a href="#" class="play-nav-btn" id="toggleChatLink">Show Tools</a>
-                <a href="javascript:location.reload()" class="play-nav-btn">Refresh</a>
-            </div>
+            <a href="#home" class="play-nav-btn">Main Menu</a>
+            <a href="https://discord.gg/sCnvbXVnMf" target="_blank" class="play-nav-btn">Discord</a>
+            <a href="#" onclick="window.open('https://mejrs.github.io/historical?era=rs2_2004_07_13&p=0&x=2944&y=3411&z=-1&m=-1&layer=grid', 'WorldMap', 'width=600,height=450,menubar=no,toolbar=no,location=no,status=no'); return false;" class="play-nav-btn">World Map</a>
+            <a href="#" class="play-nav-btn" id="toggleChatLink">Show Tools</a>
+            <a href="javascript:location.reload()" class="play-nav-btn">Refresh</a>
             <a href="#" class="play-nav-btn" id="toggleHeaderLink">Hide Header</a>
         </div>
 
         <!-- Main content area -->
         <div class="main-content-play chat-hidden" id="play-main-content">
-            <div style="flex-grow:1; display:flex; justify-content:center; align-items:flex-start; height:100%; overflow:hidden; width:100%;">
+            <div style="flex-grow:1; display:flex; justify-content:center; align-items:flex-start; height:100%; overflow:hidden; width:100%; position:relative;">
+                <button id="showHeaderFloat" class="btn-stone" style="display:none; position:absolute; top:10px; left:10px; z-index:9999; padding:4px 8px; font-size:11px; opacity:0.7;">Show Header</button>
                 <iframe src="https://play.tsunscape.cloud/rs2.cgi" class="gameframe-iframe" allowfullscreen></iframe>
             </div>
 
@@ -1134,12 +1134,18 @@ function renderPlayPage(container: HTMLElement) {
 
   // Header toggle
   const toggleHeaderLink = container.querySelector('#toggleHeaderLink')!;
-  const playNavButtons = container.querySelector('#play-nav-buttons') as HTMLElement;
+  const playNavHeader = container.querySelector('#play-nav-header') as HTMLElement;
+  const showHeaderFloat = container.querySelector('#showHeaderFloat') as HTMLElement;
+  
   toggleHeaderLink.addEventListener('click', (e) => {
     e.preventDefault();
-    const isHidden = playNavButtons.style.display === 'none';
-    playNavButtons.style.display = isHidden ? 'flex' : 'none';
-    toggleHeaderLink.textContent = isHidden ? 'Hide Header' : 'Show Header';
+    playNavHeader.style.display = 'none';
+    showHeaderFloat.style.display = 'block';
+  });
+
+  showHeaderFloat.addEventListener('click', () => {
+    playNavHeader.style.display = 'flex';
+    showHeaderFloat.style.display = 'none';
   });
 
   // Tab switching

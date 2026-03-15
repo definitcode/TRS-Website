@@ -867,7 +867,9 @@ body:has(#play-main-content) #top-nav {
 }
 
 .w100 {
-  width: 100%;
+  width: 100% !important;
+  display: block !important;
+  box-sizing: border-box !important;
 }
 
 .bold {
