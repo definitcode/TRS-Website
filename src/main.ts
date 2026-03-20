@@ -137,7 +137,7 @@ async function renderPage() {
 
 
   if (hash === '#home') { renderHome().then(html => { content.innerHTML = html; setupGlobalListeners(); }); return; }
-  else if (hash === '#news') { renderNews().then((html: string) => { content.innerHTML = html; setupGlobalListeners(); lockNewsPanelHeight(); }); return; }
+  else if (hash === '#news') { renderNews().then((html: string) => { content.innerHTML = html; setupGlobalListeners(); lockNewsPanelHeight(); bindNewsEditButtons(); }); return; }
   else if (hash.startsWith('#wiki')) renderWiki(content, hash);
   else if (hash === '#forum') { renderForumIndex(content); return; }
   else if (hash.startsWith('#thread-')) { renderThread(content, Number(hash.replace('#thread-', ''))); return; }
@@ -376,7 +376,10 @@ async function renderNews() {
               <span class="news-chevron" style="color:#c8a840;margin-right:6px;font-size:12px;">${startOpen ? '▾' : '▸'}</span>
               ${p.title} <span class="thread-cat-tag" style="font-size:10px;">${p.category || 'General'}</span>
             </span>
-            <span style="font-size:11px;color:#888;flex-shrink:0;margin-left:12px;">${p.date}</span>
+            <span style="font-size:11px;color:#888;flex-shrink:0;margin-left:12px;display:flex;align-items:center;">
+              ${currentUser && currentUser.role === 'admin' ? `<button class="btn-edit-news" data-id="${p.id}" data-raw="${encodeURIComponent(p.content)}" data-title="${encodeURIComponent(p.title)}" data-cat="${encodeURIComponent(p.category || 'General')}" style="cursor:pointer;background:none;border:none;color:#c8a840;font-size:12px;margin-right:8px;" onclick="event.stopPropagation();">Edit</button>` : ''}
+              ${p.date}
+            </span>
           </div>
           <div id="${uid}" class="news-body wiki-content" style="padding:14px 16px;color:#ccc;line-height:1.7;border-top:1px solid #2a2c2e;display:${startOpen ? 'block' : 'none'};word-break:break-word;overflow-wrap:break-word;">${contentHtml}</div>
         </div>
@@ -449,7 +452,10 @@ async function renderWiki(container: HTMLElement, hash: string) {
       <div style="padding-top:10px; display:block; text-align:left;">
         <div class="breadcrumb" style="margin-top:10px;"><a href="#home">Home</a><span class="bc-sep">&gt;</span><a href="#wiki">Wiki</a><span class="bc-sep">&gt;</span><span>${article.category}</span></div>
         <div class="panel w100" style="width:100%; box-sizing:border-box;">
-          <div class="panel-header" style="text-align:left">${article.title} <span class="thread-cat-tag">${article.category}</span></div>
+          <div class="panel-header" style="text-align:left; display:flex; justify-content:space-between; align-items:center;">
+            <div>${article.title} <span class="thread-cat-tag">${article.category}</span></div>
+            ${currentUser && currentUser.role === 'admin' ? `<div><button class="btn-edit-wiki btn-stone" data-id="${article.id}" data-raw="${encodeURIComponent(article.content)}" data-title="${encodeURIComponent(article.title)}" data-cat="${encodeURIComponent(article.category)}" style="font-size:11px; padding:2px 8px;">Edit Article</button></div>` : ''}
+          </div>
           <div class="panel-body">
             <div style="font-size:11px;color:#888;margin-bottom:12px;border-bottom:1px solid #333;padding-bottom:6px;">Created on: ${new Date(article.createdAt || '').toLocaleDateString()}</div>
             <div class="wiki-content">${contentHtml}</div>
@@ -457,6 +463,15 @@ async function renderWiki(container: HTMLElement, hash: string) {
         </div>
       </div>
     `;
+    container.querySelectorAll('.btn-edit-wiki').forEach(btn => btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        openEditWikiModal(
+            Number(target.getAttribute('data-id')),
+            decodeURIComponent(target.getAttribute('data-title') || ''),
+            decodeURIComponent(target.getAttribute('data-cat') || ''),
+            decodeURIComponent(target.getAttribute('data-raw') || '')
+        );
+    }));
   } else {
     container.innerHTML = `
       <div style="padding-top:10px; display:block; text-align:left;">
@@ -1678,6 +1693,127 @@ function setupGlobalListeners() {
 async function boot() {
   await Promise.all([fetchMe(), fetchData()]);
   renderPage();
+}
+
+function bindNewsEditButtons() {
+    document.querySelectorAll('.btn-edit-news').forEach(btn => btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        openEditNewsModal(
+            Number(target.getAttribute('data-id')),
+            decodeURIComponent(target.getAttribute('data-title') || ''),
+            decodeURIComponent(target.getAttribute('data-cat') || 'General'),
+            decodeURIComponent(target.getAttribute('data-raw') || '')
+        );
+    }));
+}
+
+function openEditNewsModal(id: number, title: string, category: string, content: string) {
+  document.getElementById('modal-edit-news')?.remove();
+  const raw = `
+    <div class="modal-overlay" id="modal-edit-news">
+      <div class="modal-box" style="width:500px">
+        <div class="modal-title-bar">
+          <span class="modal-title">Edit News</span>
+          <button class="modal-close" id="men-close">x</button>
+        </div>
+        <div class="modal-body">
+          <div id="men-err" class="err-msg"></div>
+          <div id="men-ok" class="ok-msg"></div>
+          <form id="f-edit-news">
+            <div class="form-row"><span class="form-lbl">News Title</span><input type="text" id="en-title" class="form-inp"></div>
+            <div class="form-row"><span class="form-lbl">Category</span><input type="text" id="en-cat" class="form-inp"></div>
+            ${getEditorControlsHTML()}
+            <div class="form-row"><span class="form-lbl">Content</span><textarea id="en-content" class="form-textarea" style="height:120px"></textarea></div>
+            <button type="button" class="btn-red w100 mt-10" id="btn-save-news">Save Changes</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', raw);
+  const mov = document.getElementById('modal-edit-news')!;
+  
+  (document.getElementById('en-title') as HTMLInputElement).value = title;
+  (document.getElementById('en-cat') as HTMLInputElement).value = category;
+  (document.getElementById('en-content') as HTMLTextAreaElement).value = content;
+  
+  requestAnimationFrame(() => mov.classList.add('open'));
+  mov.querySelector('#men-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
+  bindEditorControls(document.getElementById('f-edit-news'), 'en-content');
+
+  document.getElementById('btn-save-news')?.addEventListener('click', async () => {
+    const nTitle = (document.getElementById('en-title') as HTMLInputElement).value.trim();
+    const nCat = (document.getElementById('en-cat') as HTMLInputElement).value.trim();
+    const nContent = (document.getElementById('en-content') as HTMLTextAreaElement).value.trim();
+    const err = document.getElementById('men-err')!;
+    if (!nTitle || !nContent) { err.textContent = 'Title and content are required'; err.classList.add('show'); return; }
+    
+    const btn = document.getElementById('btn-save-news') as HTMLButtonElement;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    const res = await apiPut('/news/' + id, { title: nTitle, category: nCat, content: nContent }, true);
+    if (res.ok) {
+        await fetchData(); // Refresh global stores
+        mov.classList.remove('open'); setTimeout(() => mov.remove(), 250);
+        if (window.location.hash === '#home' || window.location.hash === '#news') renderPage();
+    } else {
+        err.textContent = (await res.json()).error || 'Failed to edit news'; err.classList.add('show');
+        btn.disabled = false; btn.textContent = 'Save Changes';
+    }
+  });
+}
+
+function openEditWikiModal(id: number, title: string, category: string, content: string) {
+  document.getElementById('modal-edit-wiki')?.remove();
+  const raw = `
+    <div class="modal-overlay" id="modal-edit-wiki">
+      <div class="modal-box" style="width:500px">
+        <div class="modal-title-bar">
+          <span class="modal-title">Edit Wiki Article</span>
+          <button class="modal-close" id="mew-close">x</button>
+        </div>
+        <div class="modal-body">
+          <div id="mew-err" class="err-msg"></div>
+          <form id="f-edit-wiki">
+            <div class="form-row"><span class="form-lbl">Wiki Title</span><input type="text" id="ew-title" class="form-inp"></div>
+            <div class="form-row"><span class="form-lbl">Category</span><input type="text" id="ew-cat" class="form-inp"></div>
+            ${getEditorControlsHTML()}
+            <div class="form-row"><span class="form-lbl">Content</span><textarea id="ew-content" class="form-textarea" style="height:120px"></textarea></div>
+            <button type="button" class="btn-red w100 mt-10" id="btn-save-wiki">Save Changes</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', raw);
+  const mov = document.getElementById('modal-edit-wiki')!;
+  
+  (document.getElementById('ew-title') as HTMLInputElement).value = title;
+  (document.getElementById('ew-cat') as HTMLInputElement).value = category;
+  (document.getElementById('ew-content') as HTMLTextAreaElement).value = content;
+
+  requestAnimationFrame(() => mov.classList.add('open'));
+  mov.querySelector('#mew-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
+  bindEditorControls(document.getElementById('f-edit-wiki'), 'ew-content');
+
+  document.getElementById('btn-save-wiki')?.addEventListener('click', async () => {
+    const wTitle = (document.getElementById('ew-title') as HTMLInputElement).value.trim();
+    const wCat = (document.getElementById('ew-cat') as HTMLInputElement).value.trim();
+    const wContent = (document.getElementById('ew-content') as HTMLTextAreaElement).value.trim();
+    const err = document.getElementById('mew-err')!;
+    if (!wTitle || !wCat || !wContent) { err.textContent = 'All fields are required'; err.classList.add('show'); return; }
+    
+    const btn = document.getElementById('btn-save-wiki') as HTMLButtonElement;
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+    const res = await apiPut('/wiki/' + id, { title: wTitle, category: wCat, content: wContent }, true);
+    if (res.ok) {
+        await fetchData(); // Refresh global stores
+        mov.classList.remove('open'); setTimeout(() => mov.remove(), 250);
+        if (window.location.hash.startsWith('#wiki')) renderPage();
+    } else {
+        err.textContent = (await res.json()).error || 'Failed to edit wiki'; err.classList.add('show');
+        btn.disabled = false; btn.textContent = 'Save Changes';
+    }
+  });
 }
 
 window.addEventListener('hashchange', () => renderPage());

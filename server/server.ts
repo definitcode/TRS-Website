@@ -228,6 +228,26 @@ app.post('/api/news', auth, authAdmin, (req, res) => {
     res.json(newItem);
 });
 
+app.put('/api/news/:id', auth, authAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    const { title, category, content } = req.body;
+    console.log(`Attempting to update news: ID ${id} by user ${(req as any).user.username}`);
+
+    if (!title || !content) { res.status(400).json({ error: 'Title and content are required' }); return; }
+
+    const newsList = readJson<News[]>(NEWS_FILE);
+    const idx = newsList.findIndex(n => n.id === id);
+    if (idx === -1) { res.status(404).json({ error: 'News not found' }); return; }
+
+    newsList[idx].title = title;
+    newsList[idx].category = category || 'Update';
+    newsList[idx].content = content;
+
+    writeJson(NEWS_FILE, newsList);
+    console.log(`News updated successfully: ID ${id}`);
+    res.json(newsList[idx]);
+});
+
 app.post('/api/updates', auth, authAdmin, (req, res) => {
     const { title } = req.body;
     console.log(`Attempting to post update: "${title}" by user ${(req as any).user.username}`);
@@ -265,6 +285,26 @@ app.post('/api/wiki', auth, authAdmin, (req, res) => {
     writeJson(WIKI_FILE, wikiList);
     console.log(`Wiki article posted successfully: ${title} (ID: ${newItem.id})`);
     res.json(newItem);
+});
+
+app.put('/api/wiki/:id', auth, authAdmin, (req, res) => {
+    const id = Number(req.params.id);
+    const { title, category, content } = req.body;
+    console.log(`Attempting to update wiki article: ID ${id} by user ${(req as any).user.username}`);
+
+    if (!title || !category || !content) { res.status(400).json({ error: 'All fields required' }); return; }
+
+    const wikiList = readJson<WikiArticle[]>(WIKI_FILE);
+    const idx = wikiList.findIndex(w => w.id === id);
+    if (idx === -1) { res.status(404).json({ error: 'Wiki article not found' }); return; }
+
+    wikiList[idx].title = title;
+    wikiList[idx].category = category;
+    wikiList[idx].content = content;
+
+    writeJson(WIKI_FILE, wikiList);
+    console.log(`Wiki article updated successfully: ID ${id}`);
+    res.json(wikiList[idx]);
 });
 
 // Forum Routes
