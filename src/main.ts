@@ -279,7 +279,7 @@ async function renderHome() {
         <div style="flex:1; min-width:220px;">
           <div style="font-size:13px; color:#ccc; line-height:1.7;">
             <b style="color:#FFE139;">Account Whitelisting is done through our Discord server.</b><br>
-            To get started, join the Discord and use the <span style="color:#5865F2; background:#1a1c2e; border:1px solid #4752C4; border-radius:3px; padding:1px 6px; font-family:monospace; font-size:12px;">/setname</span> command in the <b style="color:#aaa;">Discord</b>. Your name will then be whitelisted and you can log in to the game world.
+            To get started, join the Discord and use the <span style="color:#5865F2; background:#1a1c2e; border:1px solid #4752C4; border-radius:3px; padding:1px 6px; font-family:monospace; font-size:12px;">/whitelist</span> command in the <b style="color:#aaa;">Discord</b>. Your name will then be whitelisted and you can log in to the game world.
           </div>
           <div style="margin-top:10px; font-size:11px; color:#666;">
             Already whitelisted? Use the <b style="color:#aaa;">Play Now</b> button at the top of the page.
@@ -1195,7 +1195,7 @@ function openAuthModal(tab: 'login' | 'register' = 'login') {
             </div>
             <div class="form-row"><span class="form-lbl">Password</span><input type="password" id="r-pwd" class="form-inp"></div>
             <div style="background:#1a1c1e; border:1px solid #333; border-left:3px solid #c8a840; padding:8px 10px; margin:10px 0 4px 0; font-size:11px; color:#aaa; line-height:1.5;">
-              <b style="color:#FFE139;">&#9432; Note:</b> This creates a <b style="color:#fff;">website account only</b> and does not grant access to the game. To create a game account, join our <a href="https://discord.gg/qpcenn4W6P" target="_blank" style="color:#5865F2;">Discord</a> and use <span style="font-family:monospace; color:#5865F2;">/setname</span> in Discord.
+              <b style="color:#FFE139;">&#9432; Note:</b> This creates a <b style="color:#fff;">website account only</b> and does not grant access to the game. To create a game account, join our <a href="https://discord.gg/qpcenn4W6P" target="_blank" style="color:#5865F2;">Discord</a> and use <span style="font-family:monospace; color:#5865F2;">/whitelist</span> in Discord.
             </div>
             <button class="btn-red w100 mt-10" id="btn-rs">Create Account</button>
           </form>
@@ -1235,7 +1235,7 @@ function openAuthModal(tab: 'login' | 'register' = 'login') {
     const [u, em, p] = [(document.getElementById('r-usr') as HTMLInputElement).value, (document.getElementById('r-eml') as HTMLInputElement).value, (document.getElementById('r-pwd') as HTMLInputElement).value];
     if (!u || !p) { err.textContent = 'Username and password are required'; err.classList.add('show'); return; }
     document.getElementById('btn-rs')!.innerHTML = '<span class="spinner"></span>';
-    const res = await apiPost('/setname', { username: u, email: em, password: p });
+    const res = await apiPost('/whitelist', { username: u, email: em, password: p });
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error; err.classList.add('show'); document.getElementById('btn-rs')!.textContent = 'Create Account'; return; }
     authToken = data.token; currentUser = data.user; localStorage.setItem('trs_token', data.token);
