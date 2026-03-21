@@ -1250,7 +1250,7 @@ function openAuthModal(tab: 'login' | 'register' = 'login') {
     const [u, em, p] = [(document.getElementById('r-usr') as HTMLInputElement).value, (document.getElementById('r-eml') as HTMLInputElement).value, (document.getElementById('r-pwd') as HTMLInputElement).value];
     if (!u || !p) { err.textContent = 'Username and password are required'; err.classList.add('show'); return; }
     document.getElementById('btn-rs')!.innerHTML = '<span class="spinner"></span>';
-    const res = await apiPost('/whitelist', { username: u, email: em, password: p });
+    const res = await apiPost('/register', { username: u, email: em, password: p });
     const data = await res.json();
     if (!res.ok) { err.textContent = data.error; err.classList.add('show'); document.getElementById('btn-rs')!.textContent = 'Create Account'; return; }
     authToken = data.token; currentUser = data.user; localStorage.setItem('trs_token', data.token);
