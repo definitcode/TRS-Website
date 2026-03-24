@@ -62,7 +62,7 @@ interface WikiArticle { id: number; title: string; category: string; content: st
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy for accurate client IPs
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase limit to 10mb for large content
 
 // Prevent the website from being embedded in iframes (stops recursive iframe bug)
 app.use((_req, res, next) => {
@@ -229,22 +229,37 @@ app.post('/api/news', auth, authAdmin, (req, res) => {
 });
 
 app.put('/api/news/:id', auth, authAdmin, (req, res) => {
-    const id = Number(req.params.id);
+    const idParam = req.params.id;
+    const id = Number(idParam);
     const { title, category, content } = req.body;
-    console.log(`Attempting to update news: ID ${id} by user ${(req as any).user.username}`);
+    console.log(`[NEWS] Attempting to update news: ID="${idParam}" (parsed: ${id}) by user: ${(req as any).user.username}`);
 
-    if (!title || !content) { res.status(400).json({ error: 'Title and content are required' }); return; }
+    if (isNaN(id)) {
+        console.warn(`[NEWS] Invalid ID provided for update: "${idParam}"`);
+        res.status(400).json({ error: 'Invalid news ID' });
+        return;
+    }
+
+    if (!title || !content) { 
+        res.status(400).json({ error: 'Title and content are required' }); 
+        return; 
+    }
 
     const newsList = readJson<News[]>(NEWS_FILE);
-    const idx = newsList.findIndex(n => n.id === id);
-    if (idx === -1) { res.status(404).json({ error: 'News not found' }); return; }
+    const idx = newsList.findIndex(n => String(n.id) === String(id)); // More robust comparison
+    if (idx === -1) { 
+        console.warn(`[NEWS] Post not found for update: ${id}. Available IDs: ${newsList.map(n => n.id).join(', ')}`);
+        res.status(404).json({ error: 'News not found' }); 
+        return; 
+    }
 
+    // Preserve original fields if not provided
     newsList[idx].title = title;
-    newsList[idx].category = category || 'Update';
+    newsList[idx].category = category || newsList[idx].category || 'General';
     newsList[idx].content = content;
 
     writeJson(NEWS_FILE, newsList);
-    console.log(`News updated successfully: ID ${id}`);
+    console.log(`[NEWS] Post updated successfully: ID=${id}`);
     res.json(newsList[idx]);
 });
 

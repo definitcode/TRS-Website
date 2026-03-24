@@ -1741,6 +1741,7 @@ function openEditNewsModal(id: number, title: string, category: string, content:
   mov.querySelector('#men-close')?.addEventListener('click', () => { mov.classList.remove('open'); setTimeout(() => mov.remove(), 250); });
   bindEditorControls(document.getElementById('f-edit-news'), 'en-content');
 
+  document.getElementById('btn-save-news')?.replaceWith(document.getElementById('btn-save-news')!.cloneNode(true)); // Clear existing listeners
   document.getElementById('btn-save-news')?.addEventListener('click', async () => {
     const nTitle = (document.getElementById('en-title') as HTMLInputElement).value.trim();
     const nCat = (document.getElementById('en-cat') as HTMLInputElement).value.trim();
@@ -1750,13 +1751,20 @@ function openEditNewsModal(id: number, title: string, category: string, content:
     
     const btn = document.getElementById('btn-save-news') as HTMLButtonElement;
     btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
-    const res = await apiPut('/news/' + id, { title: nTitle, category: nCat, content: nContent }, true);
-    if (res.ok) {
-        await fetchData(); // Refresh global stores
-        mov.classList.remove('open'); setTimeout(() => mov.remove(), 250);
-        if (window.location.hash === '#home' || window.location.hash === '#news') renderPage();
-    } else {
-        err.textContent = (await res.json()).error || 'Failed to edit news'; err.classList.add('show');
+    try {
+        const res = await apiPut('/news/' + id, { title: nTitle, category: nCat, content: nContent }, true);
+        if (res.ok) {
+            await fetchData(); // Refresh global stores
+            mov.classList.remove('open'); setTimeout(() => mov.remove(), 250);
+            if (window.location.hash === '#home' || window.location.hash === '#news') renderPage();
+        } else {
+            err.textContent = await getJsonError(res);
+            err.classList.add('show');
+            btn.disabled = false; btn.textContent = 'Save Changes';
+        }
+    } catch (e: any) {
+        err.textContent = 'Network or Client Error: ' + e.message;
+        err.classList.add('show');
         btn.disabled = false; btn.textContent = 'Save Changes';
     }
   });
