@@ -18,7 +18,7 @@ const POSTS_FILE = path.join(DATA_DIR, 'posts.json');
 const NEWS_FILE = path.join(DATA_DIR, 'news.json');
 const UPDATES_FILE = path.join(DATA_DIR, 'updates.json');
 const WIKI_FILE = path.join(DATA_DIR, 'wiki.json');
-const JWT_SECRET = 'temple_rs_secret_change_in_prod';
+const JWT_SECRET = process.env.JWT_SECRET || 'temple_rs_secret_change_in_prod';
 
 // Ensure data directory and files exist
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -97,8 +97,8 @@ function authAdmin(req: express.Request, res: express.Response, next: express.Ne
         res.status(401).json({ error: 'Unauthorized' });
         return;
     }
-    if ((req as any).user.role !== 'admin') {
-        console.warn(`Admin access denied for user: ${(req as any).user.username} (Role: ${(req as any).user.role})`);
+    if (!String((req as any).user.role).toLowerCase().includes('admin')) {
+        console.warn(`[AUTH] Admin access denied for user: ${(req as any).user.username} (Role: ${(req as any).user.role})`);
         res.status(403).json({ error: 'Forbidden: Admin access required' });
         return;
     }
